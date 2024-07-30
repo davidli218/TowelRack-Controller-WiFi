@@ -7,6 +7,7 @@ user_paired_status g_system_paired_flag = USER_UNPAIRED;
 
 /* 函数声明 */
 static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);
+static void ip_event_handler(void *, esp_event_base_t, int32_t, void *);
 static void sc_event_handler(void *, esp_event_base_t, int32_t, void *);
 static void smartconfig_task(void *);
 
@@ -29,6 +30,13 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "[Wi-Fi.ER] Wi-Fi STA disconnected");
 
         ESP_ERROR_CHECK(esp_wifi_connect());
+    }
+}
+
+static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
+    if (event_id == IP_EVENT_STA_GOT_IP) {
+        /* Wi-Fi STA 模式获取IP地址事件 */
+        ESP_LOGI(TAG, "[IP.ER] Got IP address successfully");
     }
 }
 
@@ -135,6 +143,7 @@ void system_wifi_init(void) {
 
     // 注册Wi-Fi事件处理程序
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
 
     /* [3] Wi-Fi 启动阶段 */
     ESP_ERROR_CHECK(esp_wifi_start());
