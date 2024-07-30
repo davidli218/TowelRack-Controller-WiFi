@@ -20,13 +20,17 @@ static void system_init(void) {
 
     /* 读取NVS中的配对标志 */
     nvs_handle_t my_handle;
-    uint8_t paired;
     ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
-    ESP_ERROR_CHECK(nvs_get_u8(my_handle, "paired", &paired));
-    if (paired == USER_PAIRED) {
+
+    uint8_t paired = USER_UNPAIRED;
+    err = nvs_get_u8(my_handle, "paired", &paired);
+
+    if (err == ESP_OK && paired == USER_PAIRED) {
         ESP_LOGI(TAG, "[System] Wi-Fi has been previous paired");
         g_system_paired_flag = USER_PAIRED;
     }
+
+    nvs_close(my_handle);
 
     ESP_ERROR_CHECK(esp_event_loop_create_default()); // 创建系统事件任务循环
 }

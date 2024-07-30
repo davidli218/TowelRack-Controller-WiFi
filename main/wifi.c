@@ -108,6 +108,7 @@ static void smartconfig_task(void *parm) {
             ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
             ESP_ERROR_CHECK(nvs_set_u8(my_handle, "paired", USER_PAIRED));
             ESP_ERROR_CHECK(nvs_commit(my_handle));
+            nvs_close(my_handle);
 
             /* 注销SmartConfig事件处理程序 */
             ESP_ERROR_CHECK(esp_event_handler_unregister(SC_EVENT, ESP_EVENT_ANY_ID, &sc_event_handler));
