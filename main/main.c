@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "button.h"
 #include "led.h"
 #include "wifi.h"
 
@@ -42,5 +43,6 @@ void app_main(void) {
     system_display_init();  // 初始化数码管
     display_flush_buffer(); // 刷新数码管显示
 
-    system_wifi_init(); // 初始化Wi-Fi
+    system_button_init(); // 初始化按钮
+    system_wifi_init();   // 初始化Wi-Fi
 }
