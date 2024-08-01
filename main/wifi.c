@@ -58,7 +58,7 @@ static void sc_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
         memcpy(wifi_config.sta.ssid, evt->ssid, sizeof(wifi_config.sta.ssid)); // 拷贝SSID到Wi-Fi配置实例
         memcpy(wifi_config.sta.password, evt->password, sizeof(wifi_config.sta.password)); // 拷贝密码到Wi-Fi配置实例
 
-/* 是否设置目标AP的MAC地址，只有希望验证目标AP的MAC地址时才需要设置 */
+        /* 是否设置目标AP的MAC地址，只有希望验证目标AP的MAC地址时才需要设置 */
 #ifdef CONFIG_SET_MAC_ADDRESS_OF_TARGET_AP
         wifi_config.sta.bssid_set = evt->bssid_set;
         if (wifi_config.sta.bssid_set == true) {
