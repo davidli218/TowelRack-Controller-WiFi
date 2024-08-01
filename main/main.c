@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "led.h"
 #include "wifi.h"
 
 static const char *TAG = "TRC-W";
@@ -36,6 +37,10 @@ static void system_init(void) {
 }
 
 void app_main(void) {
-    system_init();      // 初始化系统
+    system_init(); // 初始化系统
+
+    system_display_init();  // 初始化数码管
+    display_flush_buffer(); // 刷新数码管显示
+
     system_wifi_init(); // 初始化Wi-Fi
 }
