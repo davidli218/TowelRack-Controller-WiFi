@@ -3,6 +3,7 @@
 #include "nvs_flash.h"
 
 #include "button.h"
+#include "knob.h"
 #include "led.h"
 #include "wifi.h"
 
@@ -44,5 +45,6 @@ void app_main(void) {
     display_flush_buffer(); // 刷新数码管显示
 
     system_button_init(); // 初始化按钮
+    system_knob_init();   // 初始化旋钮
     system_wifi_init();   // 初始化Wi-Fi
 }
