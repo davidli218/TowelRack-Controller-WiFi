@@ -41,8 +41,8 @@ static void system_init(void) {
 void app_main(void) {
     system_init(); // 初始化系统
 
-    system_display_init();  // 初始化数码管
-    display_flush_buffer(); // 刷新数码管显示
+    system_display_init();            // 初始化数码管
+    system_display_set_string("123"); // 设置数码管显示
 
     system_button_init(); // 初始化按钮
     system_knob_init();   // 初始化旋钮

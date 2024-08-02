@@ -1,7 +1,10 @@
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
 #include "esp_attr.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+
+#include <string.h>
 
 /* 数码管引脚定义 */
 #define DISP_PIN_1 GPIO_NUM_4
@@ -22,4 +25,4 @@
 
 void system_display_init(void);
 
-void display_flush_buffer(void);
+void system_display_set_string(const char *str);

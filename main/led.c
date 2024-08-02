@@ -1,17 +1,34 @@
 #include "led.h"
 
-char g_display_pattern[6] = {'1', 0, '2', 0, '3', 0};
+static const char *TAG = "TRC-W::DISP";
 
-static uint16_t display_buffer[24] = {0};
-static int display_buffer_len = 0;
+static char display_pattern[7] = "";      // 数码管显示内容
+static uint16_t display_buffer[24] = {0}; // 数码管显示缓冲区
+static int display_buffer_len = 0;        // 数码管显示缓冲区长度
+
+/* 数码管可显示的字符字典 */
+static const uint8_t disp_pattern_segment_map[12][7] = {
+    {0, 0, 0, 0, 0, 0, 0}, // None
+    {0, 1, 1, 0, 0, 0, 0}, // 1
+    {1, 1, 0, 1, 1, 0, 1}, // 2
+    {1, 1, 1, 1, 0, 0, 1}, // 3
+    {0, 1, 1, 0, 0, 1, 1}, // 4
+    {1, 0, 1, 1, 0, 1, 1}, // 5
+    {1, 0, 1, 1, 1, 1, 1}, // 6
+    {1, 1, 1, 0, 0, 0, 0}, // 7
+    {1, 1, 1, 1, 1, 1, 1}, // 8
+    {1, 1, 1, 1, 0, 1, 1}, // 9
+    {1, 1, 1, 1, 1, 1, 0}, // 0
+    {1, 0, 0, 1, 1, 1, 1}, // E
+};
 
 /*
- * 7段数码管引脚定义
+ * 数码管的引脚定义
  *
- * 行号代表从左到右数字的位置，列号代表段位置。
- * 高8位表示要设置为高电平的引脚，低8位表示要设置为低电平的引脚。
+ * Key: [行号]代表从左到右数码管的编号，[列号]代表数码管的段号。
+ * Val: [高8位]表示要设为高电平的引脚，[低8位]表示要设为低电平的引脚。
  */
-static const uint16_t display_pin_map[3][8] = {
+static const uint16_t disp_segment_pin_map[3][8] = {
     {HL16_CMD(DISP_PIN_5, DISP_PIN_6), HL16_CMD(DISP_PIN_4, DISP_PIN_6), HL16_CMD(DISP_PIN_1, DISP_PIN_6),
      HL16_CMD(DISP_PIN_6, DISP_PIN_1), HL16_CMD(DISP_PIN_5, DISP_PIN_1), HL16_CMD(DISP_PIN_2, DISP_PIN_1),
      HL16_CMD(DISP_PIN_1, DISP_PIN_2), HL16_CMD(DISP_PIN_2, DISP_PIN_6)},
@@ -24,9 +41,9 @@ static const uint16_t display_pin_map[3][8] = {
 };
 
 /**
- * @brief 重置数码管引脚状态为高阻态
+ * @brief 重置数码管全部引脚状态为高阻态
  */
-static void display_reset(void) {
+static void disp_reset(void) {
     gpio_set_direction(DISP_PIN_1, GPIO_MODE_OUTPUT_OD);
     gpio_set_direction(DISP_PIN_2, GPIO_MODE_OUTPUT_OD);
     gpio_set_direction(DISP_PIN_3, GPIO_MODE_OUTPUT_OD);
@@ -42,12 +59,12 @@ static void display_reset(void) {
 }
 
 /**
- * @brief 点亮数码管中的一个LED
+ * @brief 点亮数码管中的一段LED
  *
- * @param pin_config 7段数码管引脚配置
+ * @param pin_config 数码管引脚配置
  */
-static void display_set_bit(uint16_t pin_config) {
-    display_reset();
+static void disp_enable_one_segment(uint16_t pin_config) {
+    disp_reset();
 
     gpio_set_direction(HL16_GETHI(pin_config), GPIO_MODE_OUTPUT);
     gpio_set_direction(HL16_GETLO(pin_config), GPIO_MODE_OUTPUT);
@@ -56,112 +73,101 @@ static void display_set_bit(uint16_t pin_config) {
 }
 
 /**
- * @brief 定时器回调函数，用于刷新数码管显示
+ * @brief 获取字符在数码管字符字典中的索引
+ *
+ * @param character 查询的字符
+ *
+ * @return 字符在数码管字符字典中的索引, 无法识别的字符返回空白字符索引
  */
-static bool IRAM_ATTR display_main_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event,
-                                      void *user_data) {
-    BaseType_t high_task_awoken = pdFALSE;
+static int disp_get_pattern_index(char character) {
+    switch (character) {
+        case '1': return 1;
+        case '2': return 2;
+        case '3': return 3;
+        case '4': return 4;
+        case '5': return 5;
+        case '6': return 6;
+        case '7': return 7;
+        case '8': return 8;
+        case '9': return 9;
+        case '0': return 10;
+        case 'E': return 11;
+        default: return 0;
+    }
+}
 
+/**
+ * @brief 刷新数码管显示缓冲区
+ *
+ * 将`display_pattern`中的字符解析并缓存到`display_buffer`中
+ */
+static void disp_flush_buffer(void) {
+    int buf_count = 0;
+    int unit_ptr = 0;        // 当前正在处理的数码管单元
+    bool prev_is_dot = true; // 上一个字符是否是小数点
+
+    for (int i = 0; i < strlen(display_pattern); i++) {
+        bool is_dot = display_pattern[i] == '.';
+
+        if (unit_ptr + (is_dot ? 0 : 1) > 2) {
+            ESP_LOGW(TAG, "Too many characters to display, only the first 3 will be displayed.");
+            break;
+        }
+
+        if (is_dot) {
+            display_buffer[buf_count++] = disp_segment_pin_map[unit_ptr][7];
+            prev_is_dot = true;
+            unit_ptr++;
+        } else {
+            if (!prev_is_dot) {
+                unit_ptr++;
+            }
+            int index = disp_get_pattern_index(display_pattern[i]);
+            for (int j = 0; j < 7; j++) {
+                if (disp_pattern_segment_map[index][j] == 1) {
+                    display_buffer[buf_count++] = disp_segment_pin_map[unit_ptr][j];
+                }
+            }
+            prev_is_dot = false;
+        }
+    }
+
+    display_buffer_len = buf_count;
+}
+
+/**
+ * @brief (数码管刷新定时器回调函数) 刷新数码管
+ */
+static bool IRAM_ATTR disp_main_refresh_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event,
+                                           void *user_data) {
     static int display_buffer_ptr;
 
     if (display_buffer_ptr >= display_buffer_len)
         display_buffer_ptr = 0;
 
     if (display_buffer_len > 0)
-        display_set_bit(display_buffer[display_buffer_ptr++]);
+        disp_enable_one_segment(display_buffer[display_buffer_ptr++]);
 
-    return (high_task_awoken == pdTRUE);
+    return pdFALSE;
 }
 
 /**
- * @brief 将显示内容解码并存储到缓冲区中
+ * @brief 设置数码管显示内容
+ *
+ * @param str 要显示的内容
  */
-void display_flush_buffer(void) {
-    int buf_count = 0;
-
-    for (int i = 0; i < 3; i++) {
-        // 处理主显示内容
-        switch (g_display_pattern[i * 2]) {
-        case '0':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][4];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            break;
-        case '1':
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            break;
-        case '2':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][4];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '3':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '4':
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '5':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '6':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][4];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '7':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            break;
-        case '8':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][4];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        case '9':
-            display_buffer[buf_count++] = display_pin_map[i][0];
-            display_buffer[buf_count++] = display_pin_map[i][1];
-            display_buffer[buf_count++] = display_pin_map[i][2];
-            display_buffer[buf_count++] = display_pin_map[i][3];
-            display_buffer[buf_count++] = display_pin_map[i][5];
-            display_buffer[buf_count++] = display_pin_map[i][6];
-            break;
-        default:
-            break;
-        }
-
-        // 处理小数点
-        if (g_display_pattern[i * 2 + 1] != 0) {
-            display_buffer[buf_count++] = display_pin_map[i][7];
-        }
+void system_display_set_string(const char *str) {
+    // 如果显示内容没有变化，则不刷新
+    if (strcmp(display_pattern, str) == 0) {
+        return;
     }
 
-    display_buffer_len = buf_count;
+    // 复制显示内容
+    strncpy(display_pattern, str, sizeof(display_pattern));
+    // 确保显示内容以'\0'结尾
+    display_pattern[sizeof(display_pattern) - 1] = '\0';
+    // 刷新数码管显示缓冲区
+    disp_flush_buffer();
 }
 
 /**
@@ -187,13 +193,14 @@ void system_display_init(void) {
         .resolution_hz = 100000, // 100kHz
     };
     gptimer_event_callbacks_t gptimer_callbacks = {
-        .on_alarm = display_main_cb,
+        .on_alarm = disp_main_refresh_cb,
     };
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = 50, // 0.5ms
         .flags.auto_reload_on_alarm = true,
     };
 
+    // 开启数码管刷新定时器
     ESP_ERROR_CHECK(gptimer_new_timer(&gptimer_config, &gptimer_handle));
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_handle, &gptimer_callbacks, NULL));
     ESP_ERROR_CHECK(gptimer_enable(gptimer_handle));
