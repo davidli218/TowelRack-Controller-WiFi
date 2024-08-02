@@ -9,11 +9,16 @@ dependencies:
     source:
       type: service
     version: 0.5.3
+  espressif/knob:
+    component_hash: aeec301a28a84d3a24aeeaef79c8bcffb4ecc153316570fef710ff27e2399d5a
+    source:
+      type: service
+    version: 0.1.5
   idf:
     component_hash: null
     source:
       type: idf
     version: 5.3.0
-manifest_hash: 4847e8f741ffce5a66eac7835869baeee06186385b009f4ebb7d73e3ea20a463
+manifest_hash: 80b66849c18b01ffdee9c345f18cbc5d15065e41460bc0690159c58074310df4
 target: esp32c3
 version: 1.0.0
