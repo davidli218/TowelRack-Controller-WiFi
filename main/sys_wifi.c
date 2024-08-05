@@ -2,8 +2,8 @@
 
 static const char *TAG = "TRC-W::WiFi";
 
-/* 全局标识符 */
-bool g_system_paired_flag = false;
+/* 全局变量 */
+extern bool g_system_paired_flag;
 
 /* 函数声明 */
 static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);
