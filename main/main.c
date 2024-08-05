@@ -9,7 +9,7 @@
 
 static const char *TAG = "TRC-W";
 
-extern user_paired_status g_system_paired_flag;
+extern bool g_system_paired_flag;
 
 static void system_init(void) {
     /* 初始化NVS (Non-Volatile Storage) 闪存 */
@@ -25,12 +25,10 @@ static void system_init(void) {
     nvs_handle_t my_handle;
     ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
 
-    uint8_t paired = USER_UNPAIRED;
-    err = nvs_get_u8(my_handle, "paired", &paired);
-
-    if (err == ESP_OK && paired == USER_PAIRED) {
-        ESP_LOGI(TAG, "[System] Wi-Fi has been previous paired");
-        g_system_paired_flag = USER_PAIRED;
+    uint8_t temp = 0;
+    err = nvs_get_u8(my_handle, "paired", &temp);
+    if (err == ESP_OK) {
+        g_system_paired_flag = true;
     }
 
     nvs_close(my_handle);

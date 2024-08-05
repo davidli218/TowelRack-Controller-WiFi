@@ -3,7 +3,7 @@
 static const char *TAG = "TRC-W::WiFi";
 
 /* 全局标识符 */
-user_paired_status g_system_paired_flag = USER_UNPAIRED;
+bool g_system_paired_flag = false;
 
 /* 函数声明 */
 static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);
@@ -19,7 +19,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         /* Wi-Fi STA 模式启动事件 */
         ESP_LOGI(TAG, "[Wi-Fi.ER] Wi-Fi STA started");
 
-        if (g_system_paired_flag == USER_PAIRED) {
+        if (g_system_paired_flag) {
             ESP_LOGI(TAG, "[Wi-Fi.ER] Wi-Fi has been previous configured");
             ESP_ERROR_CHECK(esp_wifi_connect());
         } else {
@@ -114,14 +114,14 @@ static void smartconfig_task(void *parm) {
             /* 向NVS中写入配对完成标志 */
             nvs_handle_t my_handle;
             ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
-            ESP_ERROR_CHECK(nvs_set_u8(my_handle, "paired", USER_PAIRED));
+            ESP_ERROR_CHECK(nvs_set_u8(my_handle, "paired", 1));
             ESP_ERROR_CHECK(nvs_commit(my_handle));
             nvs_close(my_handle);
 
             /* 注销SmartConfig事件处理程序 */
             ESP_ERROR_CHECK(esp_event_handler_unregister(SC_EVENT, ESP_EVENT_ANY_ID, &sc_event_handler));
             /* 设置配对成功全局标志 */
-            g_system_paired_flag = USER_PAIRED;
+            g_system_paired_flag = true;
 
             vTaskDelete(NULL);
         }
@@ -132,8 +132,7 @@ void system_wifi_init(void) {
     /* [1] Wi-Fi/LwIP 初始化阶段 */
     ESP_ERROR_CHECK(esp_netif_init()); // 创建一个 LwIP(TCP/IP协议栈) 核心任务
 
-    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta(); // 创建有 TCP/IP 堆栈的默认网络接口实例绑定STA
-    assert(sta_netif);                                            // 断言网络接口实例是否创建成功
+    esp_netif_create_default_wifi_sta(); // 创建有 TCP/IP 堆栈的默认网络接口实例绑定STA
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT(); // 加载默认的WiFi初始化配置
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));                // 初始化 Wi-Fi 驱动程序
