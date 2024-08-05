@@ -1,5 +1,5 @@
-#ifndef TOWERRACK_CONTROLLER_WIFI_H
-#define TOWERRACK_CONTROLLER_WIFI_H
+#ifndef TOWERRACK_CONTROLLER_SYS_WIFI_H
+#define TOWERRACK_CONTROLLER_SYS_WIFI_H
 
 #include "esp_event.h"
 #include "esp_log.h"
@@ -14,4 +14,4 @@
 
 void system_wifi_init(void);
 
-#endif // TOWERRACK_CONTROLLER_WIFI_H
+#endif // TOWERRACK_CONTROLLER_SYS_WIFI_H
