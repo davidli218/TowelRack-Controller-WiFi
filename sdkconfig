@@ -449,7 +449,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # Example Configuration
 #
-CONFIG_SET_MAC_ADDRESS_OF_TARGET_AP=y
+# CONFIG_SET_MAC_ADDRESS_OF_TARGET_AP is not set
 # end of Example Configuration
 
 #
