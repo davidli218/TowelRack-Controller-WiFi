@@ -4,7 +4,7 @@
 
 #include "sys_display.h"
 #include "sys_input.h"
-#include "wifi.h"
+#include "sys_wifi.h"
 
 static const char *TAG = "TRC-W";
 
