@@ -1,3 +1,6 @@
+#ifndef TOWERRACK_CONTROLLER_SYS_DISPLAY_H
+#define TOWERRACK_CONTROLLER_SYS_DISPLAY_H
+
 #include "driver/gpio.h"
 #include "driver/gptimer.h"
 #include "esp_attr.h"
@@ -26,3 +29,5 @@
 void system_display_init(void);
 
 void system_display_set_string(const char *str);
+
+#endif // TOWERRACK_CONTROLLER_SYS_DISPLAY_H
