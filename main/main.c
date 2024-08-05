@@ -6,7 +6,7 @@
 #include "sys_input.h"
 #include "sys_wifi.h"
 
-static const char *TAG = "TRC-W";
+__unused static const char *TAG = "TRC-W";
 
 /* 全局变量 */
 bool g_system_paired_flag = false; // [标识符] 系统是否已经配对过

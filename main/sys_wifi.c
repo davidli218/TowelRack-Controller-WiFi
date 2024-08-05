@@ -1,6 +1,6 @@
 #include "sys_wifi.h"
 
-static const char *TAG = "TRC-W::WiFi";
+__unused static const char *TAG = "TRC-W::WiFi";
 
 /* 全局变量 */
 extern bool g_system_paired_flag;

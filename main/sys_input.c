@@ -1,6 +1,6 @@
 #include "sys_input.h"
 
-static const char *TAG = "TRC-W::SysIn";
+__unused static const char *TAG = "TRC-W::SysIn";
 
 static void button_single_click_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK"); }
 

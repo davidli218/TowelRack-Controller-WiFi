@@ -1,6 +1,6 @@
 #include "sys_display.h"
 
-static const char *TAG = "TRC-W::DISP";
+__unused static const char *TAG = "TRC-W::DISP";
 
 static char display_pattern[7] = "";      // 数码管显示内容
 static uint16_t display_buffer[24] = {0}; // 数码管显示缓冲区
