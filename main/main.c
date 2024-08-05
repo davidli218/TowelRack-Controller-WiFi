@@ -2,9 +2,8 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "button.h"
-#include "knob.h"
 #include "led.h"
+#include "sys_input.h"
 #include "wifi.h"
 
 static const char *TAG = "TRC-W";
@@ -42,7 +41,6 @@ void app_main(void) {
     system_display_init();            // 初始化数码管
     system_display_set_string("123"); // 设置数码管显示
 
-    system_button_init(); // 初始化按钮
-    system_knob_init();   // 初始化旋钮
-    system_wifi_init();   // 初始化Wi-Fi
+    system_input_init(); // 初始化输入设备
+    system_wifi_init();  // 初始化Wi-Fi
 }
