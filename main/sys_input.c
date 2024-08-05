@@ -2,20 +2,41 @@
 
 __unused static const char *TAG = "TRC-W::SysIn";
 
-static void button_single_click_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "BUTTON_SINGLE_CLICK"); }
+QueueHandle_t sys_input_queue = NULL;
 
-static void button_double_click_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "BUTTON_DOUBLE_CLICK"); }
+/* 输入事件回调函数 */
 
-static void button_long_press_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "BUTTON_LONG_PRESS"); }
-
-static void button_press_repeat_cb(void *arg, void *usr_data) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    esp_restart();
+static void button_single_click_cb(void *arg, void *usr_data) {
+    const sys_input_event_t event = BUTTON_EVENT_SINGLE_CLICK;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
 }
 
-static void knob_left_cb(void *arg, void *data) { ESP_LOGI(TAG, "[Knob] Left"); }
+static void button_double_click_cb(void *arg, void *usr_data) {
+    const sys_input_event_t event = BUTTON_EVENT_DOUBLE_CLICK;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
+}
 
-static void knob_right_cb(void *arg, void *data) { ESP_LOGI(TAG, "[Knob] Right"); }
+static void button_long_press_cb(void *arg, void *usr_data) {
+    const sys_input_event_t event = BUTTON_EVENT_LONG_PRESS;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
+}
+
+static void button_press_repeat_cb(void *arg, void *usr_data) {
+    const sys_input_event_t event = BUTTON_EVENT_PRESS_REPEAT;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
+}
+
+static void knob_left_cb(void *arg, void *data) {
+    const sys_input_event_t event = KNOB_EVENT_LEFT;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
+}
+
+static void knob_right_cb(void *arg, void *data) {
+    const sys_input_event_t event = KNOB_EVENT_RIGHT;
+    xQueueSendFromISR(sys_input_queue, &event, NULL);
+}
+
+/* 初始化输入设备 */
 
 static void system_knob_init(void) {
     knob_config_t knob_config = {
@@ -51,7 +72,11 @@ static void system_button_init(void) {
     iot_button_register_cb(btn_handle, BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
 }
 
+/* 暴露函数 */
+
 void system_input_init(void) {
     system_button_init();
     system_knob_init();
+
+    sys_input_queue = xQueueCreate(10, sizeof(sys_input_event_t));
 }
