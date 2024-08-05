@@ -8,6 +8,11 @@ static void button_double_click_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "B
 
 static void button_long_press_cb(void *arg, void *usr_data) { ESP_LOGI(TAG, "BUTTON_LONG_PRESS"); }
 
+static void button_press_repeat_cb(void *arg, void *usr_data) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    esp_restart();
+}
+
 void system_button_init(void) {
     /* 创建按钮 */
     button_config_t gpio_btn_config = {
@@ -26,4 +31,5 @@ void system_button_init(void) {
     iot_button_register_cb(btn_handle, BUTTON_SINGLE_CLICK, button_single_click_cb, NULL);
     iot_button_register_cb(btn_handle, BUTTON_DOUBLE_CLICK, button_double_click_cb, NULL);
     iot_button_register_cb(btn_handle, BUTTON_LONG_PRESS_START, button_long_press_cb, NULL);
+    iot_button_register_cb(btn_handle, BUTTON_PRESS_REPEAT, button_press_repeat_cb, NULL);
 }
