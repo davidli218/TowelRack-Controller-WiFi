@@ -2,9 +2,6 @@
 
 __unused static const char *TAG = "TRC-W::WiFi";
 
-/* 全局变量 */
-extern bool g_system_paired_flag;
-
 /* 函数声明 */
 static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);
 static void ip_event_handler(void *, esp_event_base_t, int32_t, void *);
@@ -19,7 +16,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         /* Wi-Fi STA 模式启动事件 */
         ESP_LOGI(TAG, "[Wi-Fi.ER] Wi-Fi STA started");
 
-        if (g_system_paired_flag) {
+        if (settings_get_dev_adopted() == true) {
             ESP_LOGI(TAG, "[Wi-Fi.ER] Wi-Fi has been previous configured");
             ESP_ERROR_CHECK(esp_wifi_connect());
         } else {
@@ -112,16 +109,11 @@ static void smartconfig_task(void *parm) {
             esp_smartconfig_stop();
 
             /* 向NVS中写入配对完成标志 */
-            nvs_handle_t my_handle;
-            ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &my_handle));
-            ESP_ERROR_CHECK(nvs_set_u8(my_handle, "paired", 1));
-            ESP_ERROR_CHECK(nvs_commit(my_handle));
-            nvs_close(my_handle);
+            settings_set_dev_adopted();
+            ESP_ERROR_CHECK(settings_write_parameter_to_nvs());
 
             /* 注销SmartConfig事件处理程序 */
             ESP_ERROR_CHECK(esp_event_handler_unregister(SC_EVENT, ESP_EVENT_ANY_ID, &sc_event_handler));
-            /* 设置配对成功全局标志 */
-            g_system_paired_flag = true;
 
             vTaskDelete(NULL);
         }
