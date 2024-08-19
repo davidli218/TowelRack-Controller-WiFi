@@ -3,10 +3,10 @@
 #include "nvs_flash.h"
 
 #include "app_display.h"
-#include "app_input.h"
 #include "app_settings.h"
 #include "app_tasks.h"
 #include "app_wifi.h"
+#include "bsp_input.h"
 
 __unused static const char *TAG = "app_main";
 
@@ -28,7 +28,7 @@ void app_main(void) {
     system_init(); // 初始化系统
 
     system_display_init(); // 初始化数码管
-    system_input_init();   // 初始化输入设备
+    bsp_input_init();      // 初始化输入设备
     system_tasks_init();   // 初始化应用任务
     system_wifi_init();    // 初始化Wi-Fi
 }

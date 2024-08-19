@@ -6,7 +6,7 @@
 #include "nvs_flash.h"
 
 #include "app_display.h"
-#include "app_input.h"
+#include "bsp_input.h"
 
 #include <stdlib.h>
 

@@ -2,7 +2,7 @@
 
 __unused static const char *TAG = "app_tasks";
 
-extern QueueHandle_t sys_input_queue; // 输入事件队列
+extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
 static bool sys_status_on = false; // 系统任务是否启动
 
@@ -29,7 +29,7 @@ static void sys_erase_all(void) {
  */
 static void sys_task_switch(sys_task_t task) {
     sys_task = task;
-    xQueueReset(sys_input_queue);
+    xQueueReset(bsp_input_queue);
     switch (task) {
         case SYS_TASK_MAIN: xTaskNotifyGive(sys_main_task_handle); break;
         case SYS_TASK_TIMER: xTaskNotifyGive(sys_timer_task_handle); break;
@@ -65,13 +65,13 @@ static void sys_status_turn_on(void) {
  * 拦截并处理高级别事件，转发低级别事件到前台运行任务。
  */
 static void input_redirect_task(void *pvParameters) {
-    sys_input_event_t event;
+    bsp_input_event_t event;
     while (1) {
-        if (xQueueReceive(sys_input_queue, &event, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(bsp_input_queue, &event, portMAX_DELAY) == pdTRUE) {
             ESP_LOGI(TAG, "[InputRedirectTask] Received event: %d", event);
 
             /* 拦截长按按钮事件，实现系统开关 */
-            if (event == BUTTON_EVENT_LONG_PRESS) {
+            if (event == BSP_KNOB_BUTTON_LONG_PRESS) {
                 if (sys_status_on) sys_status_turn_off();
                 else sys_status_turn_on();
                 continue;
@@ -81,11 +81,11 @@ static void input_redirect_task(void *pvParameters) {
             if (!sys_status_on) continue;
 
             /* 拦截处理系统级别的输入事件 */
-            if (event == BUTTON_EVENT_SINGLE_CLICK) { // 长按按钮: 切换任务
+            if (event == BSP_KNOB_BUTTON_SINGLE_CLICK) { // 长按按钮: 切换任务
                 if (sys_task == SYS_TASK_MAIN) sys_task_switch(SYS_TASK_TIMER);
                 else sys_task_switch(SYS_TASK_MAIN);
                 continue;
-            } else if (event == BUTTON_EVENT_PRESS_REPEAT) { // 重复按下按钮: 擦除所有数据
+            } else if (event == BSP_KNOB_BUTTON_PRESS_REPEAT) { // 重复按下按钮: 擦除所有数据
                 sys_erase_all();
                 continue;
             }
@@ -106,7 +106,7 @@ static void input_redirect_task(void *pvParameters) {
  * 负责控制目标温度的调整。
  */
 static void main_task(void *pvParameters) {
-    sys_input_event_t event;
+    bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (sys_task != SYS_TASK_MAIN) {
@@ -117,8 +117,8 @@ static void main_task(void *pvParameters) {
         /* 非阻塞接收输入事件 */
         if (xQueueReceive(sys_main_task_in_queue, &event, 0) == pdTRUE) {
             switch (event) {
-                case KNOB_EVENT_LEFT: target_temperature--; break;
-                case KNOB_EVENT_RIGHT: target_temperature++; break;
+                case BSP_KNOB_ENCODER_ACW: target_temperature--; break;
+                case BSP_KNOB_ENCODER_CW: target_temperature++; break;
                 default: break;
             }
             if (target_temperature < 30) target_temperature = 30;
@@ -138,7 +138,7 @@ static void main_task(void *pvParameters) {
  * 负责控制目标时间的调整。
  */
 static void timer_task(void *pvParameters) {
-    sys_input_event_t event;
+    bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (sys_task != SYS_TASK_TIMER) {
@@ -149,8 +149,8 @@ static void timer_task(void *pvParameters) {
         /* 非阻塞接收输入事件 */
         if (xQueueReceive(sys_timer_task_in_queue, &event, 0) == pdTRUE) {
             switch (event) {
-                case KNOB_EVENT_LEFT: target_time_minutes -= 10; break;
-                case KNOB_EVENT_RIGHT: target_time_minutes += 10; break;
+                case BSP_KNOB_ENCODER_ACW: target_time_minutes -= 10; break;
+                case BSP_KNOB_ENCODER_CW: target_time_minutes += 10; break;
                 default: break;
             }
             if (target_time_minutes < 0) target_time_minutes = 0;
@@ -168,11 +168,11 @@ static void timer_task(void *pvParameters) {
  * @brief 初始化系统任务
  */
 void system_tasks_init(void) {
-    assert(sys_input_queue != NULL); // 输入事件队列必须先初始化
-    xQueueReset(sys_input_queue);    // 重置输入事件队列
+    assert(bsp_input_queue != NULL); // 输入事件队列必须先初始化
+    xQueueReset(bsp_input_queue);    // 重置输入事件队列
 
-    sys_main_task_in_queue = xQueueCreate(10, sizeof(sys_input_event_t));  // 创建主要任务输入队列
-    sys_timer_task_in_queue = xQueueCreate(10, sizeof(sys_input_event_t)); // 创建定时任务输入队列
+    sys_main_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t));  // 创建主要任务输入队列
+    sys_timer_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t)); // 创建定时任务输入队列
 
     xTaskCreate(main_task, "MainTask", 2048, NULL, 10, &sys_main_task_handle);    // 创建主要任务
     xTaskCreate(timer_task, "TimerTask", 2048, NULL, 10, &sys_timer_task_handle); // 创建定时任务
