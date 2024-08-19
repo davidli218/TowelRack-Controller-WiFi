@@ -4,7 +4,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#include "sys_display.h"
+#include "app_display.h"
 #include "app_input.h"
 
 #include <stdlib.h>

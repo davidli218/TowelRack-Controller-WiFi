@@ -3,7 +3,7 @@
 
 #include "app_settings.h"
 #include "app_wifi.h"
-#include "sys_display.h"
+#include "app_display.h"
 #include "app_input.h"
 #include "sys_tasks.h"
 
