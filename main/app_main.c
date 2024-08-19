@@ -2,10 +2,10 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "app_display.h"
 #include "app_settings.h"
 #include "app_tasks.h"
 #include "app_wifi.h"
+#include "bsp_display.h"
 #include "bsp_input.h"
 
 __unused static const char *TAG = "app_main";

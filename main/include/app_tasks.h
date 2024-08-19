@@ -5,7 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "nvs_flash.h"
 
-#include "app_display.h"
+#include "bsp_display.h"
 #include "bsp_input.h"
 
 #include <stdlib.h>
