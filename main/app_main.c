@@ -9,9 +9,6 @@
 
 __unused static const char *TAG = "TRC-W";
 
-/* 全局变量 */
-bool g_system_paired_flag = false; // [标识符] 系统是否已经配对过
-
 static void system_init(void) {
     /* 初始化NVS (Non-Volatile Storage) 闪存 */
     esp_err_t err = nvs_flash_init();
