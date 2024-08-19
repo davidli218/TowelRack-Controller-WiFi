@@ -2,9 +2,12 @@
 
 __unused static const char *TAG = "TRC-W::DISP";
 
+static bool display_status_on = false;    // 数码管是否启动
 static char display_pattern[7] = "";      // 数码管显示内容
 static uint16_t display_buffer[24] = {0}; // 数码管显示缓冲区
 static int display_buffer_len = 0;        // 数码管显示缓冲区长度
+
+static gptimer_handle_t disp_gptimer_handle; // 数码管刷新定时器句柄
 
 /* 数码管可显示的字符字典 */
 static const uint8_t disp_pattern_segment_map[12][7] = {
@@ -142,11 +145,9 @@ static bool IRAM_ATTR disp_main_refresh_cb(gptimer_handle_t timer, const gptimer
                                            void *user_data) {
     static int display_buffer_ptr;
 
-    if (display_buffer_ptr >= display_buffer_len)
-        display_buffer_ptr = 0;
+    if (display_buffer_ptr >= display_buffer_len) display_buffer_ptr = 0;
 
-    if (display_buffer_len > 0)
-        disp_enable_one_segment(display_buffer[display_buffer_ptr++]);
+    if (display_buffer_len > 0) disp_enable_one_segment(display_buffer[display_buffer_ptr++]);
 
     return pdFALSE;
 }
@@ -168,6 +169,33 @@ void system_display_set_string(const char *str) {
     display_pattern[sizeof(display_pattern) - 1] = '\0';
     // 刷新数码管显示缓冲区
     disp_flush_buffer();
+
+    // 如果显示内容为空，则暂停数码管刷新
+    if (display_buffer_len == 0) system_display_pause();
+    else if (!display_status_on) system_display_resume();
+}
+
+void system_display_set_int(int num) {
+    char str[4];
+    snprintf(str, sizeof(str), "%d", num);
+    system_display_set_string(str);
+}
+
+/**
+ * @brief 暂停数码管刷新
+ */
+void system_display_pause(void) {
+    ESP_ERROR_CHECK(gptimer_stop(disp_gptimer_handle));
+    disp_reset();
+    display_status_on = false;
+}
+
+/**
+ * @brief 恢复数码管刷新
+ */
+void system_display_resume(void) {
+    ESP_ERROR_CHECK(gptimer_start(disp_gptimer_handle));
+    display_status_on = true;
 }
 
 /**
@@ -186,7 +214,6 @@ void system_display_init(void) {
     gpio_config(&io_conf);
 
     // 初始化数码管刷新定时器
-    gptimer_handle_t gptimer_handle;
     gptimer_config_t gptimer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
@@ -201,9 +228,10 @@ void system_display_init(void) {
     };
 
     // 开启数码管刷新定时器
-    ESP_ERROR_CHECK(gptimer_new_timer(&gptimer_config, &gptimer_handle));
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_handle, &gptimer_callbacks, NULL));
-    ESP_ERROR_CHECK(gptimer_enable(gptimer_handle));
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer_handle, &alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(gptimer_handle));
+    ESP_ERROR_CHECK(gptimer_new_timer(&gptimer_config, &disp_gptimer_handle));
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(disp_gptimer_handle, &gptimer_callbacks, NULL));
+    ESP_ERROR_CHECK(gptimer_enable(disp_gptimer_handle));
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(disp_gptimer_handle, &alarm_config));
+    ESP_ERROR_CHECK(gptimer_start(disp_gptimer_handle));
+    system_display_set_string("");
 }

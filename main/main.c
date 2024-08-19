@@ -4,6 +4,7 @@
 
 #include "sys_display.h"
 #include "sys_input.h"
+#include "sys_tasks.h"
 #include "sys_wifi.h"
 
 __unused static const char *TAG = "TRC-W";
@@ -15,7 +16,6 @@ static void system_init(void) {
     /* 初始化NVS (Non-Volatile Storage) 闪存 */
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        // NVS partition was truncated and needs to be erased. Retry nvs_flash_init
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
@@ -39,9 +39,8 @@ static void system_init(void) {
 void app_main(void) {
     system_init(); // 初始化系统
 
-    system_display_init();            // 初始化数码管
-    system_display_set_string("123"); // 设置数码管显示
-
-    system_input_init(); // 初始化输入设备
-    system_wifi_init();  // 初始化Wi-Fi
+    system_display_init(); // 初始化数码管
+    system_input_init();   // 初始化输入设备
+    system_tasks_init();   // 初始化应用任务
+    system_wifi_init();    // 初始化Wi-Fi
 }

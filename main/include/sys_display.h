@@ -30,4 +30,10 @@ void system_display_init(void);
 
 void system_display_set_string(const char *str);
 
+void system_display_set_int(int num);
+
+void system_display_pause(void);
+
+void system_display_resume(void);
+
 #endif // TOWERRACK_CONTROLLER_SYS_DISPLAY_H
