@@ -1,11 +1,19 @@
+#include <string.h>
+
+#include "esp_event.h"
+#include "esp_log.h"
+#include "esp_mac.h"
+#include "esp_smartconfig.h"
+#include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include "app_settings.h"
 #include "app_wifi.h"
 
 __unused static const char *TAG = "app_wifi";
 
-/* 函数声明 */
-static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);
-static void ip_event_handler(void *, esp_event_base_t, int32_t, void *);
-static void sc_event_handler(void *, esp_event_base_t, int32_t, void *);
+/* 函数前置声明 */
 static void smartconfig_task(void *);
 
 /* FreeRTOS 任务句柄 */
