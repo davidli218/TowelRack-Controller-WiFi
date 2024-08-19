@@ -1,5 +1,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 
 #include "app_display.h"
 #include "app_input.h"
