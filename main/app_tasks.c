@@ -1,6 +1,6 @@
-#include "sys_tasks.h"
+#include "app_tasks.h"
 
-__unused static const char *TAG = "sys_tasks";
+__unused static const char *TAG = "app_tasks";
 
 extern QueueHandle_t sys_input_queue; // 输入事件队列
 

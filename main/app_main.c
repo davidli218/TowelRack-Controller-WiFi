@@ -1,11 +1,11 @@
 #include "esp_event.h"
 #include "esp_log.h"
 
-#include "app_settings.h"
-#include "app_wifi.h"
 #include "app_display.h"
 #include "app_input.h"
-#include "sys_tasks.h"
+#include "app_settings.h"
+#include "app_tasks.h"
+#include "app_wifi.h"
 
 __unused static const char *TAG = "app_main";
 
