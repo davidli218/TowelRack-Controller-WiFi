@@ -1,6 +1,6 @@
 #include "sys_input.h"
 
-__unused static const char *TAG = "TRC-W::SysIn";
+__unused static const char *TAG = "sys_input";
 
 QueueHandle_t sys_input_queue = NULL;
 

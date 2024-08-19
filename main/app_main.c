@@ -7,7 +7,7 @@
 #include "sys_tasks.h"
 #include "sys_wifi.h"
 
-__unused static const char *TAG = "TRC-W";
+__unused static const char *TAG = "app_main";
 
 static void system_init(void) {
     /* 初始化NVS (Non-Volatile Storage) 闪存 */

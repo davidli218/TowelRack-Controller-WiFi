@@ -1,6 +1,6 @@
 #include "sys_wifi.h"
 
-__unused static const char *TAG = "TRC-W::WiFi";
+__unused static const char *TAG = "sys_wifi";
 
 /* 函数声明 */
 static void wifi_event_handler(void *, esp_event_base_t, int32_t, void *);

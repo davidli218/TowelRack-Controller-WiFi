@@ -1,6 +1,6 @@
 #include "sys_display.h"
 
-__unused static const char *TAG = "TRC-W::DISP";
+__unused static const char *TAG = "sys_display";
 
 static bool display_status_on = false;    // 数码管是否启动
 static char display_pattern[7] = "";      // 数码管显示内容
