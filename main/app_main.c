@@ -4,7 +4,7 @@
 #include "app_settings.h"
 #include "app_wifi.h"
 #include "sys_display.h"
-#include "sys_input.h"
+#include "app_input.h"
 #include "sys_tasks.h"
 
 __unused static const char *TAG = "app_main";

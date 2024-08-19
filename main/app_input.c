@@ -1,6 +1,6 @@
-#include "sys_input.h"
+#include "app_input.h"
 
-__unused static const char *TAG = "sys_input";
+__unused static const char *TAG = "app_input";
 
 QueueHandle_t sys_input_queue = NULL;
 

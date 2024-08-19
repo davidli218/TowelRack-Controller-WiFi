@@ -5,7 +5,7 @@
 #include "freertos/FreeRTOS.h"
 
 #include "sys_display.h"
-#include "sys_input.h"
+#include "app_input.h"
 
 #include <stdlib.h>
 
