@@ -41,7 +41,7 @@ static void sys_task_switch(sys_task_t task) {
  * @brief 关闭系统任务
  */
 static void sys_status_turn_off(void) {
-    system_display_pause();
+    bsp_display_pause();
     sys_task_switch(SYS_TASK_IDLE);
     sys_status_on = false;
 }
@@ -53,7 +53,7 @@ static void sys_status_turn_on(void) {
     target_temperature = 50;
     target_time_minutes = 360;
 
-    system_display_resume();
+    bsp_display_resume();
     sys_task_switch(SYS_TASK_MAIN);
     sys_status_on = true;
 }
@@ -111,7 +111,7 @@ static void main_task(void *pvParameters) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (sys_task != SYS_TASK_MAIN) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            system_display_set_int(target_temperature);
+            bsp_display_set_int(target_temperature);
         }
 
         /* 非阻塞接收输入事件 */
@@ -125,7 +125,7 @@ static void main_task(void *pvParameters) {
             if (target_temperature > 60) target_temperature = 60;
 
             ESP_LOGI("TRC-W::Main", "Target temperature changed: %d", target_temperature);
-            system_display_set_int(target_temperature);
+            bsp_display_set_int(target_temperature);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -143,7 +143,7 @@ static void timer_task(void *pvParameters) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (sys_task != SYS_TASK_TIMER) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            system_display_set_int(target_time_minutes);
+            bsp_display_set_int(target_time_minutes);
         }
 
         /* 非阻塞接收输入事件 */
@@ -157,7 +157,7 @@ static void timer_task(void *pvParameters) {
             if (target_time_minutes > 960) target_time_minutes = 960;
 
             ESP_LOGI("TRC-W::Timer", "Target time changed: %d minutes", target_time_minutes);
-            system_display_set_int(target_time_minutes);
+            bsp_display_set_int(target_time_minutes);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));

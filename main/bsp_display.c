@@ -1,16 +1,50 @@
+#include <string.h>
+
+#include "driver/gpio.h"
+#include "driver/gptimer.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+
 #include "bsp_display.h"
 
 __unused static const char *TAG = "bsp_display";
 
-static bool display_status_on = false;    // 数码管是否启动
-static char display_pattern[7] = "";      // 数码管显示内容
-static uint16_t display_buffer[24] = {0}; // 数码管显示缓冲区
-static int display_buffer_len = 0;        // 数码管显示缓冲区长度
+#define HL16_COMBI(high, low) (((high) << 8) | (low)) /* 合并两个8位数据为一个HL16数据 */
+#define HL16_GETHI(data) (((data) >> 8) & 0xFF)       /* 获取HL16数据的高8位 */
+#define HL16_GETLO(data) ((data) & 0xFF)              /* 获取HL16数据的低8位 */
 
-static gptimer_handle_t disp_gptimer_handle; // 数码管刷新定时器句柄
+/**
+ * @brief 数码管引脚配置
+ *
+ * 此设备的LED数码管在微观时间内只能同时点亮一段LED。
+ * 本宏用于定义点亮单段LED所需的引脚配置。
+ *
+ * @note 数据类型为`uint16_t`
+ * @note 使用`SegCfg_Hi`与`SegCfg_Lo`宏分别获取高低电平引脚
+ *
+ * @param high 高电平引脚
+ * @param low 低电平引脚
+ */
+#define SegCfg(high, low) HL16_COMBI(BSP_DISP_PIN_##high, BSP_DISP_PIN_##low)
+#define SegCfg_Hi(seg_cfg) HL16_GETHI(seg_cfg)
+#define SegCfg_Lo(seg_cfg) HL16_GETLO(seg_cfg)
 
-/* 数码管可显示的字符字典 */
-static const uint8_t disp_pattern_segment_map[12][7] = {
+static bool g_display_status = false;       // 显示是否开启
+static char g_display_content[32] = "";     // 显示的内容
+static uint16_t g_display_buffer[32] = {0}; // LED数码管显示缓冲区
+static int g_display_buffer_len = 0;        // LED数码管显示缓冲区长度
+
+static gptimer_handle_t display_gptimer_handle; // LED数码管刷新定时器句柄
+
+/* LED数码管引脚定义映射表 */
+static const uint16_t led_seg_cfg_map[3][8] = {
+    {SegCfg(5, 6), SegCfg(4, 6), SegCfg(1, 6), SegCfg(6, 1), SegCfg(5, 1), SegCfg(2, 1), SegCfg(1, 2), SegCfg(2, 6)},
+    {SegCfg(6, 5), SegCfg(4, 5), SegCfg(3, 5), SegCfg(2, 5), SegCfg(1, 5), SegCfg(6, 2), SegCfg(5, 2), SegCfg(2, 3)},
+    {SegCfg(6, 4), SegCfg(5, 4), SegCfg(3, 4), SegCfg(2, 4), SegCfg(1, 4), SegCfg(4, 2), SegCfg(3, 2), SegCfg(4, 3)},
+};
+
+/* LED数码管字符手册 */
+static const uint8_t led_seg_pattern_list[12][7] = {
     {0, 0, 0, 0, 0, 0, 0}, // None
     {0, 1, 1, 0, 0, 0, 0}, // 1
     {1, 1, 0, 1, 1, 0, 1}, // 2
@@ -25,64 +59,14 @@ static const uint8_t disp_pattern_segment_map[12][7] = {
     {1, 0, 0, 1, 1, 1, 1}, // E
 };
 
-/*
- * 数码管的引脚定义
- *
- * Key: [行号]代表从左到右数码管的编号，[列号]代表数码管的段号。
- * Val: [高8位]表示要设为高电平的引脚，[低8位]表示要设为低电平的引脚。
- */
-static const uint16_t disp_segment_pin_map[3][8] = {
-    {HL16_CMD(DISP_PIN_5, DISP_PIN_6), HL16_CMD(DISP_PIN_4, DISP_PIN_6), HL16_CMD(DISP_PIN_1, DISP_PIN_6),
-     HL16_CMD(DISP_PIN_6, DISP_PIN_1), HL16_CMD(DISP_PIN_5, DISP_PIN_1), HL16_CMD(DISP_PIN_2, DISP_PIN_1),
-     HL16_CMD(DISP_PIN_1, DISP_PIN_2), HL16_CMD(DISP_PIN_2, DISP_PIN_6)},
-    {HL16_CMD(DISP_PIN_6, DISP_PIN_5), HL16_CMD(DISP_PIN_4, DISP_PIN_5), HL16_CMD(DISP_PIN_3, DISP_PIN_5),
-     HL16_CMD(DISP_PIN_2, DISP_PIN_5), HL16_CMD(DISP_PIN_1, DISP_PIN_5), HL16_CMD(DISP_PIN_6, DISP_PIN_2),
-     HL16_CMD(DISP_PIN_5, DISP_PIN_2), HL16_CMD(DISP_PIN_2, DISP_PIN_3)},
-    {HL16_CMD(DISP_PIN_6, DISP_PIN_4), HL16_CMD(DISP_PIN_5, DISP_PIN_4), HL16_CMD(DISP_PIN_3, DISP_PIN_4),
-     HL16_CMD(DISP_PIN_2, DISP_PIN_4), HL16_CMD(DISP_PIN_1, DISP_PIN_4), HL16_CMD(DISP_PIN_4, DISP_PIN_2),
-     HL16_CMD(DISP_PIN_3, DISP_PIN_2), HL16_CMD(DISP_PIN_4, DISP_PIN_3)},
-};
-
 /**
- * @brief 重置数码管全部引脚状态为高阻态
- */
-static void disp_reset(void) {
-    gpio_set_direction(DISP_PIN_1, GPIO_MODE_OUTPUT_OD);
-    gpio_set_direction(DISP_PIN_2, GPIO_MODE_OUTPUT_OD);
-    gpio_set_direction(DISP_PIN_3, GPIO_MODE_OUTPUT_OD);
-    gpio_set_direction(DISP_PIN_4, GPIO_MODE_OUTPUT_OD);
-    gpio_set_direction(DISP_PIN_5, GPIO_MODE_OUTPUT_OD);
-    gpio_set_direction(DISP_PIN_6, GPIO_MODE_OUTPUT_OD);
-    gpio_set_level(DISP_PIN_1, 1);
-    gpio_set_level(DISP_PIN_2, 1);
-    gpio_set_level(DISP_PIN_3, 1);
-    gpio_set_level(DISP_PIN_4, 1);
-    gpio_set_level(DISP_PIN_5, 1);
-    gpio_set_level(DISP_PIN_6, 1);
-}
-
-/**
- * @brief 点亮数码管中的一段LED
- *
- * @param pin_config 数码管引脚配置
- */
-static void disp_enable_one_segment(uint16_t pin_config) {
-    disp_reset();
-
-    gpio_set_direction(HL16_GETHI(pin_config), GPIO_MODE_OUTPUT);
-    gpio_set_direction(HL16_GETLO(pin_config), GPIO_MODE_OUTPUT);
-    gpio_set_level(HL16_GETHI(pin_config), 1);
-    gpio_set_level(HL16_GETLO(pin_config), 0);
-}
-
-/**
- * @brief 获取字符在数码管字符字典中的索引
+ * @brief 获取字符在数码管字符手册中的索引
  *
  * @param character 查询的字符
  *
- * @return 字符在数码管字符字典中的索引, 无法识别的字符返回空白字符索引
+ * @return 字符在数码管字符手册中的索引, 无法识别的字符返回空白字符索引
  */
-static int disp_get_pattern_index(char character) {
+static int display_get_pattern_index(char character) {
     switch (character) {
         case '1': return 1;
         case '2': return 2;
@@ -100,114 +84,136 @@ static int disp_get_pattern_index(char character) {
 }
 
 /**
+ * @brief 重置数码管全部引脚状态为高阻态
+ */
+static void display_disable_all_seg(void) {
+    gpio_set_direction(BSP_DISP_PIN_1, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(BSP_DISP_PIN_2, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(BSP_DISP_PIN_3, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(BSP_DISP_PIN_4, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(BSP_DISP_PIN_5, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(BSP_DISP_PIN_6, GPIO_MODE_OUTPUT_OD);
+    gpio_set_level(BSP_DISP_PIN_1, 1);
+    gpio_set_level(BSP_DISP_PIN_2, 1);
+    gpio_set_level(BSP_DISP_PIN_3, 1);
+    gpio_set_level(BSP_DISP_PIN_4, 1);
+    gpio_set_level(BSP_DISP_PIN_5, 1);
+    gpio_set_level(BSP_DISP_PIN_6, 1);
+}
+
+/**
+ * @brief 点亮LED数码管中的一段LED
+ *
+ * @param pin_config 数码管引脚配置
+ */
+static void display_enable_one_seg(uint16_t pin_config) {
+    display_disable_all_seg();
+
+    gpio_set_direction(SegCfg_Hi(pin_config), GPIO_MODE_OUTPUT);
+    gpio_set_direction(SegCfg_Lo(pin_config), GPIO_MODE_OUTPUT);
+    gpio_set_level(SegCfg_Hi(pin_config), 1);
+    gpio_set_level(SegCfg_Lo(pin_config), 0);
+}
+
+/**
  * @brief 刷新数码管显示缓冲区
  *
- * 将`display_pattern`中的字符解析并缓存到`display_buffer`中
+ * 将`display_content`中的字符解析并缓存到`display_buffer`中
  */
-static void disp_flush_buffer(void) {
-    int buf_count = 0;
-    int unit_ptr = 0;        // 当前正在处理的数码管单元
+static void display_flush_buffer(void) {
+    int next_buf_index = 0;
+    int current_unit = -1;   // 当前正在处理的数码管单元
     bool prev_is_dot = true; // 上一个字符是否是小数点
 
-    for (int i = 0; i < strlen(display_pattern); i++) {
-        bool is_dot = display_pattern[i] == '.';
+    int buf_size = sizeof(g_display_buffer) / sizeof(g_display_buffer[0]);
 
-        if (unit_ptr + (is_dot ? 0 : 1) > 2) {
-            ESP_LOGW(TAG, "Too many characters to display, only the first 3 will be displayed.");
+    for (int i = 0; i < strlen(g_display_content); i++) {
+        bool is_dot = g_display_content[i] == '.';
+
+        /* 当上一个字符是小数点或者当前字符不是小数点时，数码管单元指针++ */
+        if (prev_is_dot || !is_dot) current_unit++;
+
+        /* 如果当前字符超出了数码管最大显示字符数，则停止解析 */
+        if (current_unit >= BSP_DISP_MAX_CHAR) {
+            ESP_LOGW(TAG, "Display content overflow, truncating display content");
+            break;
+        }
+
+        /* 如果缓冲区已满，则停止解析 */
+        if (next_buf_index >= buf_size) {
+            ESP_LOGW(TAG, "Display buffer overflow, truncating display content");
             break;
         }
 
         if (is_dot) {
-            display_buffer[buf_count++] = disp_segment_pin_map[unit_ptr][7];
-            prev_is_dot = true;
-            unit_ptr++;
+            g_display_buffer[next_buf_index++] = led_seg_cfg_map[current_unit][7];
         } else {
-            if (!prev_is_dot) {
-                unit_ptr++;
-            }
-            int index = disp_get_pattern_index(display_pattern[i]);
+            int index = display_get_pattern_index(g_display_content[i]);
             for (int j = 0; j < 7; j++) {
-                if (disp_pattern_segment_map[index][j] == 1) {
-                    display_buffer[buf_count++] = disp_segment_pin_map[unit_ptr][j];
+                if (led_seg_pattern_list[index][j] == 1) {
+                    g_display_buffer[next_buf_index++] = led_seg_cfg_map[current_unit][j];
                 }
             }
-            prev_is_dot = false;
         }
+
+        prev_is_dot = is_dot;
     }
 
-    display_buffer_len = buf_count;
+    g_display_buffer_len = next_buf_index;
 }
 
 /**
  * @brief (数码管刷新定时器回调函数) 刷新数码管
  */
-static bool IRAM_ATTR disp_main_refresh_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event,
-                                           void *user_data) {
+static bool IRAM_ATTR display_refresh_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event,
+                                               void *user_data) {
     static int display_buffer_ptr;
 
-    if (display_buffer_ptr >= display_buffer_len) display_buffer_ptr = 0;
-
-    if (display_buffer_len > 0) disp_enable_one_segment(display_buffer[display_buffer_ptr++]);
+    if (display_buffer_ptr >= g_display_buffer_len) display_buffer_ptr = 0;
+    if (g_display_buffer_len > 0) display_enable_one_seg(g_display_buffer[display_buffer_ptr++]);
 
     return pdFALSE;
 }
 
-/**
- * @brief 设置数码管显示内容
- *
- * @param str 要显示的内容
- */
-void system_display_set_string(const char *str) {
-    // 如果显示内容没有变化，则不刷新
-    if (strcmp(display_pattern, str) == 0) {
-        return;
-    }
+void bsp_display_set_string(const char *str) {
+    if (str == NULL) return;
 
     // 复制显示内容
-    strncpy(display_pattern, str, sizeof(display_pattern));
-    // 确保显示内容以'\0'结尾
-    display_pattern[sizeof(display_pattern) - 1] = '\0';
+    memset(g_display_content, 0, sizeof(g_display_content));
+    strncpy(g_display_content, str, sizeof(g_display_content) - 1);
+
     // 刷新数码管显示缓冲区
-    disp_flush_buffer();
+    display_flush_buffer();
 
     // 如果显示内容为空，则暂停数码管刷新
-    if (display_buffer_len == 0) system_display_pause();
-    else if (!display_status_on) system_display_resume();
+    if (g_display_buffer_len == 0) bsp_display_pause();
+    else if (g_display_status == 0) bsp_display_resume();
 }
 
-void system_display_set_int(int num) {
-    char str[4];
+void bsp_display_set_int(int num) {
+    char str[BSP_DISP_MAX_CHAR + 1];
     snprintf(str, sizeof(str), "%d", num);
-    system_display_set_string(str);
+    bsp_display_set_string(str);
 }
 
-/**
- * @brief 暂停数码管刷新
- */
-void system_display_pause(void) {
-    ESP_ERROR_CHECK(gptimer_stop(disp_gptimer_handle));
-    disp_reset();
-    display_status_on = false;
+void bsp_display_pause(void) {
+    ESP_ERROR_CHECK(gptimer_stop(display_gptimer_handle));
+    display_disable_all_seg();
+    g_display_status = false;
 }
 
-/**
- * @brief 恢复数码管刷新
- */
-void system_display_resume(void) {
-    ESP_ERROR_CHECK(gptimer_start(disp_gptimer_handle));
-    display_status_on = true;
+void bsp_display_resume(void) {
+    ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
+    g_display_status = true;
 }
 
-/**
- * @brief 初始化数码管
- */
-void system_display_init(void) {
+void bsp_display_init(void) {
     // 初始化数码管所需的GPIO
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << DISP_PIN_1 | 1ULL << DISP_PIN_2 | 1ULL << DISP_PIN_3 | 1ULL << DISP_PIN_4 |
-                        1ULL << DISP_PIN_5 | 1ULL << DISP_PIN_6,
+        .pin_bit_mask = 1ULL << BSP_DISP_PIN_1 | 1ULL << BSP_DISP_PIN_2 | 1ULL << BSP_DISP_PIN_3 |
+                        1ULL << BSP_DISP_PIN_4 | 1ULL << BSP_DISP_PIN_5 | 1ULL << BSP_DISP_PIN_6,
         .pull_down_en = 0,
         .pull_up_en = 0,
     };
@@ -220,7 +226,7 @@ void system_display_init(void) {
         .resolution_hz = 100000, // 100kHz
     };
     gptimer_event_callbacks_t gptimer_callbacks = {
-        .on_alarm = disp_main_refresh_cb,
+        .on_alarm = display_refresh_timer_cb,
     };
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = 50, // 0.5ms
@@ -228,10 +234,10 @@ void system_display_init(void) {
     };
 
     // 开启数码管刷新定时器
-    ESP_ERROR_CHECK(gptimer_new_timer(&gptimer_config, &disp_gptimer_handle));
-    ESP_ERROR_CHECK(gptimer_register_event_callbacks(disp_gptimer_handle, &gptimer_callbacks, NULL));
-    ESP_ERROR_CHECK(gptimer_enable(disp_gptimer_handle));
-    ESP_ERROR_CHECK(gptimer_set_alarm_action(disp_gptimer_handle, &alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(disp_gptimer_handle));
-    system_display_set_string("");
+    ESP_ERROR_CHECK(gptimer_new_timer(&gptimer_config, &display_gptimer_handle));
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(display_gptimer_handle, &gptimer_callbacks, NULL));
+    ESP_ERROR_CHECK(gptimer_enable(display_gptimer_handle));
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(display_gptimer_handle, &alarm_config));
+    ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
+    bsp_display_set_string("");
 }

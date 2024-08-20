@@ -1,39 +1,40 @@
-#ifndef TOWERRACK_CONTROLLER_SYS_DISPLAY_H
-#define TOWERRACK_CONTROLLER_SYS_DISPLAY_H
-
-#include "driver/gpio.h"
-#include "driver/gptimer.h"
-#include "esp_attr.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-
-#include <string.h>
+#pragma once
 
 /* 数码管引脚定义 */
-#define DISP_PIN_1 GPIO_NUM_4
-#define DISP_PIN_2 GPIO_NUM_5
-#define DISP_PIN_3 GPIO_NUM_6
-#define DISP_PIN_4 GPIO_NUM_7
-#define DISP_PIN_5 GPIO_NUM_18
-#define DISP_PIN_6 GPIO_NUM_19
+#define BSP_DISP_PIN_1 (GPIO_NUM_4)
+#define BSP_DISP_PIN_2 (GPIO_NUM_5)
+#define BSP_DISP_PIN_3 (GPIO_NUM_6)
+#define BSP_DISP_PIN_4 (GPIO_NUM_7)
+#define BSP_DISP_PIN_5 (GPIO_NUM_18)
+#define BSP_DISP_PIN_6 (GPIO_NUM_19)
 
-/* 合并两个8位数据为一个HL16数据 */
-#define HL16_CMD(high, low) (((high) << 8) | (low))
+#define BSP_DISP_MAX_CHAR (3)
 
-/* 获取HL16数据的高8位 */
-#define HL16_GETHI(data) (((data) >> 8) & 0xFF)
+/**
+ * @brief 初始化数码管
+ */
+void bsp_display_init(void);
 
-/* 获取HL16数据的低8位 */
-#define HL16_GETLO(data) ((data) & 0xFF)
+/**
+ * @brief 设置数码管显示字符串
+ *
+ * @param str 要显示的字符串
+ */
+void bsp_display_set_string(const char *str);
 
-void system_display_init(void);
+/**
+ * @brief 设置数码管显示整数
+ *
+ * @param num 要显示的整数
+ */
+void bsp_display_set_int(int num);
 
-void system_display_set_string(const char *str);
+/**
+ * @brief 暂停数码管显示
+ */
+void bsp_display_pause(void);
 
-void system_display_set_int(int num);
-
-void system_display_pause(void);
-
-void system_display_resume(void);
-
-#endif // TOWERRACK_CONTROLLER_SYS_DISPLAY_H
+/**
+ * @brief 恢复数码管显示
+ */
+void bsp_display_resume(void);
