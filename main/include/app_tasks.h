@@ -1,21 +1,9 @@
-#ifndef TOWERRACK_CONTROLLER_SYS_TASKS_H
-#define TOWERRACK_CONTROLLER_SYS_TASKS_H
-
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "nvs_flash.h"
-
-#include "bsp_display.h"
-#include "bsp_input.h"
-
-#include <stdlib.h>
+#pragma once
 
 typedef enum {
     SYS_TASK_IDLE = 0,
     SYS_TASK_MAIN,
     SYS_TASK_TIMER,
-} sys_task_t;
+} app_task_t;
 
-void system_tasks_init(void);
-
-#endif // TOWERRACK_CONTROLLER_SYS_TASKS_H
+void app_tasks_init(void);

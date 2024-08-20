@@ -1,38 +1,38 @@
+#include <stdlib.h>
+
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "nvs_flash.h"
+
 #include "app_tasks.h"
+#include "bsp_display.h"
+#include "bsp_input.h"
 
 __unused static const char *TAG = "app_tasks";
 
 extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
-static bool sys_status_on = false; // 系统任务是否启动
+static bool app_status_on = false; // 系统任务是否启动
 
-static sys_task_t sys_task = SYS_TASK_IDLE;          // 前台任务
-static TaskHandle_t sys_main_task_handle = NULL;     // 主要任务句柄
-static TaskHandle_t sys_timer_task_handle = NULL;    // 定时任务句柄
-static QueueHandle_t sys_main_task_in_queue = NULL;  // 主要任务输入队列
-static QueueHandle_t sys_timer_task_in_queue = NULL; // 定时任务输入队列
+static app_task_t app_task = SYS_TASK_IDLE;          // 前台任务
+static TaskHandle_t app_main_task_handle = NULL;     // 主要任务句柄
+static TaskHandle_t app_timer_task_handle = NULL;    // 定时任务句柄
+static QueueHandle_t app_main_task_in_queue = NULL;  // 主要任务输入队列
+static QueueHandle_t app_timer_task_in_queue = NULL; // 定时任务输入队列
 
 /* 系统目标参数 */
 static int target_temperature = 50;
 static int target_time_minutes = 360;
 
 /**
- * @brief 擦除所有数据并重启
- */
-static void sys_erase_all(void) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    esp_restart();
-}
-
-/**
  * @brief 切换系统前台任务
  */
-static void sys_task_switch(sys_task_t task) {
-    sys_task = task;
+static void sys_task_switch(app_task_t task) {
+    app_task = task;
     xQueueReset(bsp_input_queue);
     switch (task) {
-        case SYS_TASK_MAIN: xTaskNotifyGive(sys_main_task_handle); break;
-        case SYS_TASK_TIMER: xTaskNotifyGive(sys_timer_task_handle); break;
+        case SYS_TASK_MAIN: xTaskNotifyGive(app_main_task_handle); break;
+        case SYS_TASK_TIMER: xTaskNotifyGive(app_timer_task_handle); break;
         default: break;
     }
 }
@@ -43,7 +43,7 @@ static void sys_task_switch(sys_task_t task) {
 static void sys_status_turn_off(void) {
     bsp_display_pause();
     sys_task_switch(SYS_TASK_IDLE);
-    sys_status_on = false;
+    app_status_on = false;
 }
 
 /**
@@ -55,7 +55,7 @@ static void sys_status_turn_on(void) {
 
     bsp_display_resume();
     sys_task_switch(SYS_TASK_MAIN);
-    sys_status_on = true;
+    app_status_on = true;
 }
 
 /**
@@ -72,28 +72,34 @@ static void input_redirect_task(void *pvParameters) {
 
             /* 拦截长按按钮事件，实现系统开关 */
             if (event == BSP_KNOB_BUTTON_LONG_PRESS) {
-                if (sys_status_on) sys_status_turn_off();
+                if (app_status_on) sys_status_turn_off();
                 else sys_status_turn_on();
                 continue;
             }
 
+#ifdef APP_FACTORY_RESET_ENABLED
+            /* 拦截重复按下按钮事件，实现数据擦除 */
+            if (event == BSP_KNOB_BUTTON_PRESS_REPEAT) {
+                ESP_ERROR_CHECK(nvs_flash_erase());
+                esp_restart();
+                continue;
+            }
+#endif
+
             /* 如果系统任务未启动，则忽略其他输入事件 */
-            if (!sys_status_on) continue;
+            if (!app_status_on) continue;
 
             /* 拦截处理系统级别的输入事件 */
-            if (event == BSP_KNOB_BUTTON_SINGLE_CLICK) { // 长按按钮: 切换任务
-                if (sys_task == SYS_TASK_MAIN) sys_task_switch(SYS_TASK_TIMER);
+            if (event == BSP_KNOB_BUTTON_SINGLE_CLICK) { // 点击按钮切换前台任务
+                if (app_task == SYS_TASK_MAIN) sys_task_switch(SYS_TASK_TIMER);
                 else sys_task_switch(SYS_TASK_MAIN);
-                continue;
-            } else if (event == BSP_KNOB_BUTTON_PRESS_REPEAT) { // 重复按下按钮: 擦除所有数据
-                sys_erase_all();
                 continue;
             }
 
             /* 转发其他输入事件到前台任务 */
-            switch (sys_task) {
-                case SYS_TASK_MAIN: xQueueSend(sys_main_task_in_queue, &event, 0); break;
-                case SYS_TASK_TIMER: xQueueSend(sys_timer_task_in_queue, &event, 0); break;
+            switch (app_task) {
+                case SYS_TASK_MAIN: xQueueSend(app_main_task_in_queue, &event, 0); break;
+                case SYS_TASK_TIMER: xQueueSend(app_timer_task_in_queue, &event, 0); break;
                 default: break;
             }
         }
@@ -109,13 +115,13 @@ static void main_task(void *pvParameters) {
     bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
-        if (sys_task != SYS_TASK_MAIN) {
+        if (app_task != SYS_TASK_MAIN) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             bsp_display_set_int(target_temperature);
         }
 
         /* 非阻塞接收输入事件 */
-        if (xQueueReceive(sys_main_task_in_queue, &event, 0) == pdTRUE) {
+        if (xQueueReceive(app_main_task_in_queue, &event, 0) == pdTRUE) {
             switch (event) {
                 case BSP_KNOB_ENCODER_ACW: target_temperature--; break;
                 case BSP_KNOB_ENCODER_CW: target_temperature++; break;
@@ -141,13 +147,13 @@ static void timer_task(void *pvParameters) {
     bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
-        if (sys_task != SYS_TASK_TIMER) {
+        if (app_task != SYS_TASK_TIMER) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             bsp_display_set_int(target_time_minutes);
         }
 
         /* 非阻塞接收输入事件 */
-        if (xQueueReceive(sys_timer_task_in_queue, &event, 0) == pdTRUE) {
+        if (xQueueReceive(app_timer_task_in_queue, &event, 0) == pdTRUE) {
             switch (event) {
                 case BSP_KNOB_ENCODER_ACW: target_time_minutes -= 10; break;
                 case BSP_KNOB_ENCODER_CW: target_time_minutes += 10; break;
@@ -167,14 +173,14 @@ static void timer_task(void *pvParameters) {
 /**
  * @brief 初始化系统任务
  */
-void system_tasks_init(void) {
+void app_tasks_init(void) {
     assert(bsp_input_queue != NULL); // 输入事件队列必须先初始化
     xQueueReset(bsp_input_queue);    // 重置输入事件队列
 
-    sys_main_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t));  // 创建主要任务输入队列
-    sys_timer_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t)); // 创建定时任务输入队列
+    app_main_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t));  // 创建主要任务输入队列
+    app_timer_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t)); // 创建定时任务输入队列
 
-    xTaskCreate(main_task, "MainTask", 2048, NULL, 10, &sys_main_task_handle);    // 创建主要任务
-    xTaskCreate(timer_task, "TimerTask", 2048, NULL, 10, &sys_timer_task_handle); // 创建定时任务
+    xTaskCreate(main_task, "MainTask", 2048, NULL, 10, &app_main_task_handle);    // 创建主要任务
+    xTaskCreate(timer_task, "TimerTask", 2048, NULL, 10, &app_timer_task_handle); // 创建定时任务
     xTaskCreate(input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL);  // 创建输入重定向任务
 }

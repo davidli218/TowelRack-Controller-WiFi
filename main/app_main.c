@@ -27,8 +27,8 @@ static void system_init(void) {
 void app_main(void) {
     system_init(); // 初始化系统
 
-    bsp_display_init();  // 初始化数码管
-    bsp_input_init();    // 初始化输入设备
-    system_tasks_init(); // 初始化应用任务
-    system_wifi_init();  // 初始化Wi-Fi
+    bsp_display_init(); // 初始化数码管
+    bsp_input_init();   // 初始化输入设备
+    app_tasks_init();   // 初始化应用任务
+    system_wifi_init(); // 初始化Wi-Fi
 }
