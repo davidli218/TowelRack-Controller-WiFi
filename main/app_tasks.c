@@ -12,7 +12,7 @@ __unused static const char *TAG = "app_tasks";
 
 extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
-static bool app_status_on = false; // 系统任务是否启动
+static bool app_status_on = true; // 系统任务是否启动
 
 static app_task_t app_task = SYS_TASK_IDLE;          // 前台任务
 static TaskHandle_t app_main_task_handle = NULL;     // 主要任务句柄
@@ -22,7 +22,7 @@ static QueueHandle_t app_timer_task_in_queue = NULL; // 定时任务输入队列
 
 /* 系统目标参数 */
 static int target_temperature = 50;
-static int target_time_minutes = 360;
+static int target_time_minutes = 4;
 
 /**
  * @brief 切换系统前台任务
@@ -90,9 +90,11 @@ static void input_redirect_task(void *pvParameters) {
             if (!app_status_on) continue;
 
             /* 拦截处理系统级别的输入事件 */
-            if (event == BSP_KNOB_BUTTON_SINGLE_CLICK) { // 点击按钮切换前台任务
-                if (app_task == SYS_TASK_MAIN) sys_task_switch(SYS_TASK_TIMER);
-                else sys_task_switch(SYS_TASK_MAIN);
+            if (event == BSP_TOUCH_BUTTON_LEFT_PRESS) {
+                sys_task_switch(SYS_TASK_MAIN);
+                continue;
+            } else if (event == BSP_TOUCH_BUTTON_RIGHT_PRESS) {
+                sys_task_switch(SYS_TASK_TIMER);
                 continue;
             }
 
@@ -117,7 +119,10 @@ static void main_task(void *pvParameters) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (app_task != SYS_TASK_MAIN) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            ESP_LOGI(TAG, "Main task notified");
             bsp_display_set_int(target_temperature);
+            bsp_display_set_h_flag(false);
+            bsp_display_set_c_flag(true);
         }
 
         /* 非阻塞接收输入事件 */
@@ -149,7 +154,10 @@ static void timer_task(void *pvParameters) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
         if (app_task != SYS_TASK_TIMER) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            ESP_LOGI(TAG, "Timer task notified");
             bsp_display_set_int(target_time_minutes);
+            bsp_display_set_h_flag(true);
+            bsp_display_set_c_flag(false);
         }
 
         /* 非阻塞接收输入事件 */

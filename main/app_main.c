@@ -4,7 +4,6 @@
 
 #include "app_settings.h"
 #include "app_tasks.h"
-#include "app_wifi.h"
 #include "bsp_display.h"
 #include "bsp_input.h"
 
@@ -30,5 +29,4 @@ void app_main(void) {
     bsp_display_init(); // 初始化数码管
     bsp_input_init();   // 初始化输入设备
     app_tasks_init();   // 初始化应用任务
-    system_wifi_init(); // 初始化Wi-Fi
 }
