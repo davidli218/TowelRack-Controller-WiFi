@@ -68,7 +68,7 @@ static void input_redirect_task(void *pvParameters) {
     bsp_input_event_t event;
     while (1) {
         if (xQueueReceive(bsp_input_queue, &event, portMAX_DELAY) == pdTRUE) {
-            ESP_LOGI(TAG, "[InputRedirectTask] Received event: %d", event);
+            ESP_LOGI(TAG, "[InputRedirectTask] Received event: %s", bsp_input_event_to_string(event));
 
             /* 拦截长按按钮事件，实现系统开关 */
             if (event == BSP_KNOB_BUTTON_LONG_PRESS) {

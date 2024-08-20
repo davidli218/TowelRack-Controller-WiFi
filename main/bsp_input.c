@@ -80,3 +80,15 @@ void bsp_input_init(void) {
 
     bsp_input_queue = xQueueCreate(10, sizeof(bsp_input_event_t));
 }
+
+char *bsp_input_event_to_string(bsp_input_event_t event) {
+    switch (event) {
+        case BSP_KNOB_BUTTON_SINGLE_CLICK: return "BSP_KNOB_BUTTON_SINGLE_CLICK";
+        case BSP_KNOB_BUTTON_DOUBLE_CLICK: return "BSP_KNOB_BUTTON_DOUBLE_CLICK";
+        case BSP_KNOB_BUTTON_LONG_PRESS: return "BSP_KNOB_BUTTON_LONG_PRESS";
+        case BSP_KNOB_BUTTON_PRESS_REPEAT: return "BSP_KNOB_BUTTON_PRESS_REPEAT";
+        case BSP_KNOB_ENCODER_ACW: return "BSP_KNOB_ENCODER_ACW";
+        case BSP_KNOB_ENCODER_CW: return "BSP_KNOB_ENCODER_CW";
+        default: return "BSP_UNKNOWN_INPUT_EVENT";
+    }
+}
