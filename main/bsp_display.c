@@ -9,16 +9,16 @@
 
 __unused static const char *TAG = "bsp_display";
 
-static bool g_display_status = false;                      // 显示是否开启
-static char g_display_content[BSP_DISP_MAX_CHAR + 1] = ""; // 显示的内容
-static bool g_display_c_flag = false;                      // 是否显示C标志
-static bool g_display_h_flag = false;                      // 是否显示H标志
-static uint8_t g_display_buffer[BSP_DISP_MAX_CHAR] = {0};  // 显示缓冲区
+static bool g_display_status = false;                       // 显示是否开启
+static bool g_display_c_flag = false;                       // 是否显示C标志
+static bool g_display_h_flag = false;                       // 是否显示H标志
+static char g_display_content[BSP_DISP_MAX_CHAR + 1] = {0}; // 显示内容
+static uint8_t g_display_buffer[BSP_DISP_MAX_CHAR] = {0};   // 显示缓冲区
 
 static gptimer_handle_t display_gptimer_handle; // LED数码管刷新定时器句柄
 
-/* LED数码管字符手册 */
-static uint8_t led_seg_pattern_list[12][7] = {
+/* LED数码管字符列表 */
+static const uint8_t display_pattern_array[12][7] = {
     {0, 0, 0, 0, 0, 0, 0}, // None
     {0, 1, 1, 0, 0, 0, 0}, // 1
     {1, 1, 0, 1, 1, 0, 1}, // 2
@@ -34,7 +34,7 @@ static uint8_t led_seg_pattern_list[12][7] = {
 };
 
 /**
- * @brief 获取字符在数码管字符手册中的索引
+ * @brief 获取字符在LED数码管字符列表中的索引
  *
  * @param character 查询的字符
  *
@@ -67,8 +67,6 @@ static void display_ic_send_byte(uint8_t data) {
         gpio_set_level(BSP_DISP_IC_SHCP, 0);
         gpio_set_level(BSP_DISP_IC_SHCP, 1);
     }
-    gpio_set_level(BSP_DISP_IC_STCP, 0);
-    gpio_set_level(BSP_DISP_IC_STCP, 1);
 }
 
 /**
@@ -92,17 +90,32 @@ static void display_disable_all_seg() {
  */
 static void display_flush_buffer(void) {
     for (int i = 0; i < BSP_DISP_MAX_CHAR; i++) {
-        uint8_t buf_temp = 0;
         int pattern_index = display_get_pattern_index(g_display_content[i]);
+
+        uint8_t buf_temp = 0;
         for (int j = 0; j < 7; j++) {
-            buf_temp |= led_seg_pattern_list[pattern_index][j] << j;
+            buf_temp |= display_pattern_array[pattern_index][j] << j;
         }
-        buf_temp <<= 1;
-        g_display_buffer[i] = buf_temp;
+
+        g_display_buffer[i] = buf_temp << 1;
     }
 
     if (g_display_c_flag) g_display_buffer[0] |= 0x01;
     if (g_display_h_flag) g_display_buffer[1] |= 0x01;
+}
+
+/**
+ * @brief 清空显示缓冲区 & 关闭所有数码管 & 清空74HC595
+ */
+static void display_clear_all(void) {
+    g_display_c_flag = false;
+    g_display_h_flag = false;
+    memset(g_display_content, 0, sizeof(g_display_content));
+    memset(g_display_buffer, 0, sizeof(g_display_buffer));
+
+    display_disable_all_seg();
+    display_ic_send_byte(0);
+    display_ic_refresh();
 }
 
 /**
@@ -152,15 +165,19 @@ void bsp_display_set_h_flag(bool flag) {
 }
 
 void bsp_display_pause(void) {
+    if (!g_display_status) return;
+
     ESP_ERROR_CHECK(gptimer_stop(display_gptimer_handle));
-    display_disable_all_seg();
-    display_ic_send_byte(0);
-    display_ic_refresh();
+    display_clear_all();
+
     g_display_status = false;
 }
 
 void bsp_display_resume(void) {
+    if (g_display_status) return;
+
     ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
+
     g_display_status = true;
 }
 
@@ -195,7 +212,8 @@ void bsp_display_init(void) {
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(display_gptimer_handle, &gptimer_callbacks, NULL));
     ESP_ERROR_CHECK(gptimer_enable(display_gptimer_handle));
     ESP_ERROR_CHECK(gptimer_set_alarm_action(display_gptimer_handle, &alarm_config));
-    ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
 
-    bsp_display_set_string("");
+    // 关闭数码管显示 & 重置全局变量
+    g_display_status = false;
+    display_clear_all();
 }

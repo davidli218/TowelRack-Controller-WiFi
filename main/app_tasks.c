@@ -10,29 +10,37 @@
 
 __unused static const char *TAG = "app_tasks";
 
+#define TARGET_TEMPERATURE_DEFAULT (50)
+#define TARGET_TIME_HOURS_DEFAULT (3)
+#define TARGET_TEMPERATURE_MIN (40)
+#define TARGET_TEMPERATURE_MAX (60)
+#define TARGET_TIME_HOURS_MIN (1)
+#define TARGET_TIME_HOURS_MAX (24)
+
 extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
-static bool app_status_on = true; // 系统任务是否启动
-
-static app_task_t app_task = SYS_TASK_IDLE;          // 前台任务
-static TaskHandle_t app_main_task_handle = NULL;     // 主要任务句柄
-static TaskHandle_t app_timer_task_handle = NULL;    // 定时任务句柄
-static QueueHandle_t app_main_task_in_queue = NULL;  // 主要任务输入队列
-static QueueHandle_t app_timer_task_in_queue = NULL; // 定时任务输入队列
+static app_task_t app_task = APP_TASK_SLEEP;                  // 前台任务
+static TaskHandle_t app_task_temp_inter_handle = NULL;        // 温度交互任务.句柄
+static TaskHandle_t app_task_timer_inter_handle = NULL;       // 定时交互任务.句柄
+static QueueHandle_t app_task_temp_inter_input_queue = NULL;  // 温度交互任务.输入队列
+static QueueHandle_t app_task_timer_inter_input_queue = NULL; // 定时交互任务.输入队列
 
 /* 系统目标参数 */
-static int target_temperature = 50;
-static int target_time_minutes = 4;
+static int target_temperature = TARGET_TEMPERATURE_DEFAULT;
+static int target_time_hours = TARGET_TIME_HOURS_DEFAULT;
 
 /**
- * @brief 切换系统前台任务
+ * @brief 切换系统前台交互任务
  */
 static void sys_task_switch(app_task_t task) {
+    if (app_task == task) return;
+
     app_task = task;
     xQueueReset(bsp_input_queue);
+
     switch (task) {
-        case SYS_TASK_MAIN: xTaskNotifyGive(app_main_task_handle); break;
-        case SYS_TASK_TIMER: xTaskNotifyGive(app_timer_task_handle); break;
+        case APP_TASK_TEMP_INTERACT: xTaskNotifyGive(app_task_temp_inter_handle); break;
+        case APP_TASK_TIMER_INTERACT: xTaskNotifyGive(app_task_timer_inter_handle); break;
         default: break;
     }
 }
@@ -42,20 +50,18 @@ static void sys_task_switch(app_task_t task) {
  */
 static void sys_status_turn_off(void) {
     bsp_display_pause();
-    sys_task_switch(SYS_TASK_IDLE);
-    app_status_on = false;
+    sys_task_switch(APP_TASK_SLEEP);
 }
 
 /**
  * @brief 复位系统任务
  */
 static void sys_status_turn_on(void) {
-    target_temperature = 50;
-    target_time_minutes = 360;
+    target_temperature = TARGET_TEMPERATURE_DEFAULT;
+    target_time_hours = TARGET_TIME_HOURS_DEFAULT;
 
     bsp_display_resume();
-    sys_task_switch(SYS_TASK_MAIN);
-    app_status_on = true;
+    sys_task_switch(APP_TASK_TEMP_INTERACT);
 }
 
 /**
@@ -72,36 +78,31 @@ static void input_redirect_task(void *pvParameters) {
 
             /* 拦截长按按钮事件，实现系统开关 */
             if (event == BSP_KNOB_BUTTON_LONG_PRESS) {
-                if (app_status_on) sys_status_turn_off();
-                else sys_status_turn_on();
+                (app_task == APP_TASK_SLEEP) ? sys_status_turn_on() : sys_status_turn_off();
                 continue;
             }
 
-#ifdef APP_FACTORY_RESET_ENABLED
-            /* 拦截重复按下按钮事件，实现数据擦除 */
-            if (event == BSP_KNOB_BUTTON_PRESS_REPEAT) {
-                ESP_ERROR_CHECK(nvs_flash_erase());
-                esp_restart();
+            /* 拦截关机状态下的特殊事件 */
+            if (app_task == APP_TASK_SLEEP) {
+                if (event == BSP_KNOB_BUTTON_MULTIPLE_CLICK_8) {
+                    ESP_LOGI(TAG, "System version: %s", esp_get_idf_version());
+                }
                 continue;
             }
-#endif
-
-            /* 如果系统任务未启动，则忽略其他输入事件 */
-            if (!app_status_on) continue;
 
             /* 拦截处理系统级别的输入事件 */
-            if (event == BSP_TOUCH_BUTTON_LEFT_PRESS) {
-                sys_task_switch(SYS_TASK_MAIN);
+            if (event == BSP_TOUCH_BUTTON_LEFT_CLICK) {
+                sys_task_switch(APP_TASK_TEMP_INTERACT);
                 continue;
-            } else if (event == BSP_TOUCH_BUTTON_RIGHT_PRESS) {
-                sys_task_switch(SYS_TASK_TIMER);
+            } else if (event == BSP_TOUCH_BUTTON_RIGHT_CLICK) {
+                sys_task_switch(APP_TASK_TIMER_INTERACT);
                 continue;
             }
 
             /* 转发其他输入事件到前台任务 */
             switch (app_task) {
-                case SYS_TASK_MAIN: xQueueSend(app_main_task_in_queue, &event, 0); break;
-                case SYS_TASK_TIMER: xQueueSend(app_timer_task_in_queue, &event, 0); break;
+                case APP_TASK_TEMP_INTERACT: xQueueSend(app_task_temp_inter_input_queue, &event, 0); break;
+                case APP_TASK_TIMER_INTERACT: xQueueSend(app_task_timer_inter_input_queue, &event, 0); break;
                 default: break;
             }
         }
@@ -109,33 +110,34 @@ static void input_redirect_task(void *pvParameters) {
 }
 
 /**
- * @brief [RT任务]主要任务
+ * @brief [RT任务]温度交互任务
  *
  * 负责控制目标温度的调整。
  */
-static void main_task(void *pvParameters) {
+static void temp_inter_task(void *pvParameters) {
     bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
-        if (app_task != SYS_TASK_MAIN) {
+        if (app_task != APP_TASK_TEMP_INTERACT) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            ESP_LOGI(TAG, "Main task notified");
+
+            ESP_LOGI(TAG, "[TempInterTask] Switched to foreground");
             bsp_display_set_int(target_temperature);
             bsp_display_set_h_flag(false);
             bsp_display_set_c_flag(true);
         }
 
         /* 非阻塞接收输入事件 */
-        if (xQueueReceive(app_main_task_in_queue, &event, 0) == pdTRUE) {
+        if (xQueueReceive(app_task_temp_inter_input_queue, &event, 0) == pdTRUE) {
             switch (event) {
                 case BSP_KNOB_ENCODER_ACW: target_temperature--; break;
                 case BSP_KNOB_ENCODER_CW: target_temperature++; break;
                 default: break;
             }
-            if (target_temperature < 30) target_temperature = 30;
-            if (target_temperature > 60) target_temperature = 60;
+            if (target_temperature < TARGET_TEMPERATURE_MIN) target_temperature = TARGET_TEMPERATURE_MIN;
+            if (target_temperature > TARGET_TEMPERATURE_MAX) target_temperature = TARGET_TEMPERATURE_MAX;
 
-            ESP_LOGI("TRC-W::Main", "Target temperature changed: %d", target_temperature);
+            ESP_LOGI(TAG, "Target temperature changed: %d", target_temperature);
             bsp_display_set_int(target_temperature);
         }
 
@@ -144,34 +146,35 @@ static void main_task(void *pvParameters) {
 }
 
 /**
- * @brief [RT任务]定时任务
+ * @brief [RT任务]定时交互任务
  *
  * 负责控制目标时间的调整。
  */
-static void timer_task(void *pvParameters) {
+static void timer_inter_task(void *pvParameters) {
     bsp_input_event_t event;
     while (1) {
         /* 等待上位前台通知, 上位后立刻更新数码管显示 */
-        if (app_task != SYS_TASK_TIMER) {
+        if (app_task != APP_TASK_TIMER_INTERACT) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            ESP_LOGI(TAG, "Timer task notified");
-            bsp_display_set_int(target_time_minutes);
+
+            ESP_LOGI(TAG, "[TimerInterTask] Switched to foreground");
+            bsp_display_set_int(target_time_hours);
             bsp_display_set_h_flag(true);
             bsp_display_set_c_flag(false);
         }
 
         /* 非阻塞接收输入事件 */
-        if (xQueueReceive(app_timer_task_in_queue, &event, 0) == pdTRUE) {
+        if (xQueueReceive(app_task_timer_inter_input_queue, &event, 0) == pdTRUE) {
             switch (event) {
-                case BSP_KNOB_ENCODER_ACW: target_time_minutes -= 10; break;
-                case BSP_KNOB_ENCODER_CW: target_time_minutes += 10; break;
+                case BSP_KNOB_ENCODER_ACW: target_time_hours -= 1; break;
+                case BSP_KNOB_ENCODER_CW: target_time_hours += 1; break;
                 default: break;
             }
-            if (target_time_minutes < 0) target_time_minutes = 0;
-            if (target_time_minutes > 960) target_time_minutes = 960;
+            if (target_time_hours < TARGET_TIME_HOURS_MIN) target_time_hours = TARGET_TIME_HOURS_MAX;
+            if (target_time_hours > TARGET_TIME_HOURS_MAX) target_time_hours = TARGET_TIME_HOURS_MIN;
 
-            ESP_LOGI("TRC-W::Timer", "Target time changed: %d minutes", target_time_minutes);
-            bsp_display_set_int(target_time_minutes);
+            ESP_LOGI(TAG, "Target time changed: %d hours", target_time_hours);
+            bsp_display_set_int(target_time_hours);
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -185,10 +188,12 @@ void app_tasks_init(void) {
     assert(bsp_input_queue != NULL); // 输入事件队列必须先初始化
     xQueueReset(bsp_input_queue);    // 重置输入事件队列
 
-    app_main_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t));  // 创建主要任务输入队列
-    app_timer_task_in_queue = xQueueCreate(10, sizeof(bsp_input_event_t)); // 创建定时任务输入队列
+    app_task_temp_inter_input_queue = xQueueCreate(10, sizeof(bsp_input_event_t));  // 创建主要任务输入队列
+    app_task_timer_inter_input_queue = xQueueCreate(10, sizeof(bsp_input_event_t)); // 创建定时任务输入队列
 
-    xTaskCreate(main_task, "MainTask", 2048, NULL, 10, &app_main_task_handle);    // 创建主要任务
-    xTaskCreate(timer_task, "TimerTask", 2048, NULL, 10, &app_timer_task_handle); // 创建定时任务
-    xTaskCreate(input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL);  // 创建输入重定向任务
+    xTaskCreate(temp_inter_task, "TempInterTask", 2048, NULL, 10, &app_task_temp_inter_handle); // 创建温度交互任务
+    xTaskCreate(timer_inter_task, "TimerInterTask", 2048, NULL, 10, &app_task_timer_inter_handle); // 创建定时交互任务
+    xTaskCreate(input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL); // 创建输入重定向任务
+
+    sys_status_turn_on(); // 启动系统
 }

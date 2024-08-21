@@ -1,9 +1,9 @@
 #pragma once
 
 typedef enum {
-    SYS_TASK_IDLE = 0,
-    SYS_TASK_MAIN,
-    SYS_TASK_TIMER,
+    APP_TASK_SLEEP = 0,
+    APP_TASK_TEMP_INTERACT,
+    APP_TASK_TIMER_INTERACT,
 } app_task_t;
 
 void app_tasks_init(void);
