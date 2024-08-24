@@ -6,6 +6,7 @@
 
 #include "app_tasks.h"
 #include "bsp_display.h"
+#include "bsp_heating.h"
 #include "bsp_input.h"
 
 __unused static const char *TAG = "app_tasks";
@@ -14,7 +15,7 @@ __unused static const char *TAG = "app_tasks";
 #define TARGET_TIME_HOURS_DEFAULT (3)
 #define TARGET_TEMPERATURE_MIN (40)
 #define TARGET_TEMPERATURE_MAX (60)
-#define TARGET_TIME_HOURS_MIN (1)
+#define TARGET_TIME_HOURS_MIN (0)
 #define TARGET_TIME_HOURS_MAX (24)
 
 extern QueueHandle_t bsp_input_queue; // 输入事件队列
@@ -25,7 +26,7 @@ static TaskHandle_t app_task_timer_inter_handle = NULL;       // 定时交互任
 static QueueHandle_t app_task_temp_inter_input_queue = NULL;  // 温度交互任务.输入队列
 static QueueHandle_t app_task_timer_inter_input_queue = NULL; // 定时交互任务.输入队列
 
-/* 系统目标参数 */
+/* 系统参数 */
 static int target_temperature = TARGET_TEMPERATURE_DEFAULT;
 static int target_time_hours = TARGET_TIME_HOURS_DEFAULT;
 
@@ -182,6 +183,24 @@ static void timer_inter_task(void *pvParameters) {
 }
 
 /**
+ * @brief 加热控制任务
+ */
+void app_task_heating(void *pvParameters) {
+    while (1) {
+        int current_temperature = bsp_heating_get_temp();
+        ESP_LOGI(TAG, "Current temperature: %d", current_temperature);
+
+        if (app_task == APP_TASK_SLEEP) {
+            bsp_heating_disable();
+        } else {
+            (current_temperature < target_temperature) ? bsp_heating_enable() : bsp_heating_disable();
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+/**
  * @brief 初始化系统任务
  */
 void app_tasks_init(void) {
@@ -194,6 +213,7 @@ void app_tasks_init(void) {
     xTaskCreate(temp_inter_task, "TempInterTask", 2048, NULL, 10, &app_task_temp_inter_handle); // 创建温度交互任务
     xTaskCreate(timer_inter_task, "TimerInterTask", 2048, NULL, 10, &app_task_timer_inter_handle); // 创建定时交互任务
     xTaskCreate(input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL); // 创建输入重定向任务
+    // xTaskCreate(app_task_heating, "HeatingTask", 2048, NULL, 10, NULL);          // 创建加热控制任务
 
     sys_status_turn_on(); // 启动系统
 }

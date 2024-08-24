@@ -1,9 +1,9 @@
 dependencies:
   espressif/button:
-    component_hash: b115c8797f89b883265441aeedf4973a6d49c53bec55159767cdd9cbcd27f328
+    component_hash: c3ee3ba339a3848977496d0157008ae574a24fc59f54d27c93ab51b14446a2fb
     source:
       type: service
-    version: 3.2.3
+    version: 3.3.1
   espressif/cmake_utilities:
     component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
     source:
@@ -14,11 +14,16 @@ dependencies:
     source:
       type: service
     version: 0.1.5
+  espressif/ntc_driver:
+    component_hash: 2e4752aa8fc9768365ee9198ba800141402a7466ff3133f617f1beab87bcc2ef
+    source:
+      type: service
+    version: 0.3.0
   idf:
     component_hash: null
     source:
       type: idf
     version: 5.3.0
-manifest_hash: 80b66849c18b01ffdee9c345f18cbc5d15065e41460bc0690159c58074310df4
+manifest_hash: c1dd78a46629485bec5f51d6cbebe9eedbe17a36d2ee00094b9a1a0e03b837b6
 target: esp32c3
 version: 1.0.0
