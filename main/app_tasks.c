@@ -8,6 +8,7 @@
 #include "bsp_display.h"
 #include "bsp_heating.h"
 #include "bsp_input.h"
+#include "bsp_led_strip.h"
 
 __unused static const char *TAG = "app_tasks";
 
@@ -18,7 +19,8 @@ __unused static const char *TAG = "app_tasks";
 #define TARGET_TIME_HOURS_MIN (0)
 #define TARGET_TIME_HOURS_MAX (24)
 
-extern QueueHandle_t bsp_input_queue; // 输入事件队列
+extern QueueHandle_t bsp_input_queue;     // 输入事件队列
+extern led_indicator_handle_t led_handle; // LED指示灯句柄
 
 static app_task_t app_task = APP_TASK_SLEEP;                  // 前台任务
 static TaskHandle_t app_task_temp_inter_handle = NULL;        // 温度交互任务.句柄
@@ -52,6 +54,9 @@ static void sys_task_switch(app_task_t task) {
 static void sys_status_turn_off(void) {
     bsp_display_pause();
     sys_task_switch(APP_TASK_SLEEP);
+
+    /* 关闭所有LED指示灯 */
+    led_indicator_stop(led_handle, BLINK_ORANGE);
 }
 
 /**
@@ -63,6 +68,9 @@ static void sys_status_turn_on(void) {
 
     bsp_display_resume();
     sys_task_switch(APP_TASK_TEMP_INTERACT);
+
+    /* 启动LED指示灯 */
+    led_indicator_start(led_handle, BLINK_ORANGE);
 }
 
 /**
@@ -213,7 +221,7 @@ void app_tasks_init(void) {
     xTaskCreate(temp_inter_task, "TempInterTask", 2048, NULL, 10, &app_task_temp_inter_handle); // 创建温度交互任务
     xTaskCreate(timer_inter_task, "TimerInterTask", 2048, NULL, 10, &app_task_timer_inter_handle); // 创建定时交互任务
     xTaskCreate(input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL); // 创建输入重定向任务
-    // xTaskCreate(app_task_heating, "HeatingTask", 2048, NULL, 10, NULL);          // 创建加热控制任务
+    xTaskCreate(app_task_heating, "HeatingTask", 2048, NULL, 10, NULL);          // 创建加热控制任务
 
     sys_status_turn_on(); // 启动系统
 }
