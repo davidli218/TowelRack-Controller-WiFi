@@ -1,29 +1,94 @@
 dependencies:
   espressif/button:
     component_hash: c3ee3ba339a3848977496d0157008ae574a24fc59f54d27c93ab51b14446a2fb
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com/
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.0'
     source:
+      registry_url: https://components.espressif.com/
       type: service
     version: 3.3.1
   espressif/cmake_utilities:
     component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
     source:
+      registry_url: https://components.espressif.com/
       type: service
     version: 0.5.3
   espressif/knob:
     component_hash: aeec301a28a84d3a24aeeaef79c8bcffb4ecc153316570fef710ff27e2399d5a
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com/
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.4.1'
     source:
+      registry_url: https://components.espressif.com/
       type: service
     version: 0.1.5
+  espressif/led_indicator:
+    component_hash: 8ffbd4d0c3f996c10b5d4d23e1f13fa012684e7f97369a0d5442b8d58e6b587f
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com/
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.0'
+    - name: espressif/led_strip
+      registry_url: https://components.espressif.com/
+      require: public
+      version: '>=2.5.2'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.9.3
+  espressif/led_strip:
+    component_hash: 28c6509a727ef74925b372ed404772aeedf11cce10b78c3f69b3c66799095e2d
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.5.5
   espressif/ntc_driver:
     component_hash: 2e4752aa8fc9768365ee9198ba800141402a7466ff3133f617f1beab87bcc2ef
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com/
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=5.0'
     source:
+      registry_url: https://components.espressif.com/
       type: service
     version: 0.3.0
   idf:
-    component_hash: null
     source:
       type: idf
     version: 5.3.0
-manifest_hash: c1dd78a46629485bec5f51d6cbebe9eedbe17a36d2ee00094b9a1a0e03b837b6
+direct_dependencies:
+- espressif/button
+- espressif/knob
+- espressif/led_indicator
+- espressif/ntc_driver
+- idf
+manifest_hash: 9983f571bb60cf649909c94f1671a853a2c5ccac8e3b6fea096405a06d70fa75
 target: esp32c3
-version: 1.0.0
+version: 2.0.0
