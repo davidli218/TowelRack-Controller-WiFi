@@ -86,24 +86,24 @@ static void input_redirect_task(void *pvParameters) {
             ESP_LOGI(TAG, "[InputRedirectTask] Received event: %s", bsp_input_event_to_string(event));
 
             /* 拦截长按按钮事件，实现系统开关 */
-            if (event == BSP_KNOB_BUTTON_LONG_PRESS) {
+            if (event == BSP_KNOB_LONG_PRESS) {
                 (app_task == APP_TASK_SLEEP) ? sys_status_turn_on() : sys_status_turn_off();
                 continue;
             }
 
             /* 拦截关机状态下的特殊事件 */
             if (app_task == APP_TASK_SLEEP) {
-                if (event == BSP_KNOB_BUTTON_MULTIPLE_CLICK_8) {
+                if (event == BSP_KNOB_MT8_CLICK) {
                     ESP_LOGI(TAG, "System version: %s", esp_get_idf_version());
                 }
                 continue;
             }
 
             /* 拦截处理系统级别的输入事件 */
-            if (event == BSP_TOUCH_BUTTON_LEFT_CLICK) {
+            if (event == BSP_TOUCH_BUTTON_L_CLICK) {
                 sys_task_switch(APP_TASK_TEMP_INTERACT);
                 continue;
-            } else if (event == BSP_TOUCH_BUTTON_RIGHT_CLICK) {
+            } else if (event == BSP_TOUCH_BUTTON_R_CLICK) {
                 sys_task_switch(APP_TASK_TIMER_INTERACT);
                 continue;
             }
