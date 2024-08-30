@@ -55,7 +55,7 @@ blink_step_t const* led_mode[] = {
 };
 
 void bsp_led_strip_init(void) {
-    led_strip_config_t strip_config = {
+    const led_strip_config_t strip_config = {
         .strip_gpio_num = BSP_LED_STRIP_GPIO,     // The GPIO that connected to the LED strip's data line
         .max_leds = BSP_LED_STRIP_NUM,            // The number of LEDs in the strip,
         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
@@ -63,7 +63,7 @@ void bsp_led_strip_init(void) {
         .flags.invert_out = false,                // whether to invert the output signal
     };
 
-    led_strip_rmt_config_t rmt_config = {
+    const led_strip_rmt_config_t rmt_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,            // different clock source can lead to different power consumption
         .resolution_hz = BSP_LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
         .flags.with_dma = false,                   // DMA feature is available on ESP target like ESP32-S3

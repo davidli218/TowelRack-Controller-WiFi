@@ -40,7 +40,7 @@ static const uint8_t display_pattern_array[12][7] = {
  *
  * @return 字符在数码管字符手册中的索引, 无法识别的字符返回空白字符索引
  */
-static int display_get_pattern_index(char character) {
+static int display_get_pattern_index(const char character) {
     switch (character) {
         case '1': return 1;
         case '2': return 2;
@@ -151,18 +151,18 @@ void bsp_display_set_string(const char* str) {
     display_flush_buffer();
 }
 
-void bsp_display_set_int(int num) {
+void bsp_display_set_int(const int num) {
     char str[BSP_DISP_MAX_CHAR + 1];
     snprintf(str, sizeof(str), "%d", num);
     bsp_display_set_string(str);
 }
 
-void bsp_display_set_c_flag(bool flag) {
+void bsp_display_set_c_flag(const bool flag) {
     g_display_c_flag = flag;
     display_flush_buffer();
 }
 
-void bsp_display_set_h_flag(bool flag) {
+void bsp_display_set_h_flag(const bool flag) {
     g_display_h_flag = flag;
     display_flush_buffer();
 }
@@ -186,7 +186,7 @@ void bsp_display_resume(void) {
 
 void bsp_display_init(void) {
     // 初始化74HC595所需的引脚
-    gpio_config_t io_conf = {
+    const gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = (1ULL << BSP_DISP_IC_DS) | (1ULL << BSP_DISP_IC_SHCP) | (1ULL << BSP_DISP_IC_STCP) |
@@ -197,15 +197,15 @@ void bsp_display_init(void) {
     gpio_config(&io_conf);
 
     // 初始化数码管刷新定时器
-    gptimer_config_t gptimer_config = {
+    const gptimer_config_t gptimer_config = {
         .clk_src = GPTIMER_CLK_SRC_DEFAULT,
         .direction = GPTIMER_COUNT_UP,
         .resolution_hz = 100000, // 100kHz
     };
-    gptimer_event_callbacks_t gptimer_callbacks = {
+    const gptimer_event_callbacks_t gptimer_callbacks = {
         .on_alarm = display_refresh_timer_cb,
     };
-    gptimer_alarm_config_t alarm_config = {
+    const gptimer_alarm_config_t alarm_config = {
         .alarm_count = 100, // 1ms
         .flags.auto_reload_on_alarm = true,
     };

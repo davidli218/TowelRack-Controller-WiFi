@@ -22,7 +22,7 @@ static const sys_param_t g_default_sys_param = {
 /**
  * @brief 检查系统参数是否合法，不合法时设置为默认值
  */
-static esp_err_t settings_check(sys_param_t* param) {
+static esp_err_t settings_check(const sys_param_t* param) {
     esp_err_t ret = ESP_OK;
     ESP_GOTO_ON_FALSE(param->magic == MAGIC_HEAD, ESP_ERR_INVALID_ARG, reset, TAG, "magic incorrect");
     return ret;
