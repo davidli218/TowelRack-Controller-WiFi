@@ -18,4 +18,4 @@ typedef enum {
 
 void bsp_input_init(void);
 
-char *bsp_input_event_to_string(bsp_input_event_t event);
+char* bsp_input_event_to_string(bsp_input_event_t event);

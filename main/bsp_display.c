@@ -7,7 +7,7 @@
 
 #include "bsp_display.h"
 
-__unused static const char *TAG = "bsp_display";
+__unused static const char* TAG = "bsp_display";
 
 static bool g_display_status = false;                       // 显示是否开启
 static bool g_display_c_flag = false;                       // 是否显示C标志
@@ -53,7 +53,8 @@ static int display_get_pattern_index(char character) {
         case '9': return 9;
         case '0': return 10;
         case 'E': return 11;
-        default: return 0;
+        default:
+            return 0;
     }
 }
 
@@ -121,8 +122,10 @@ static void display_clear_all(void) {
 /**
  * @brief (数码管刷新定时器回调函数) 利用显示缓冲区刷新数码管
  */
-static bool IRAM_ATTR display_refresh_timer_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event,
-                                               void *user_data) {
+static bool IRAM_ATTR display_refresh_timer_cb(
+    gptimer_handle_t timer, const gptimer_alarm_event_data_t* event,
+    void* user_data
+) {
     static int current_digit;
 
     if (current_digit >= BSP_DISP_MAX_CHAR) current_digit = 0;
@@ -137,7 +140,7 @@ static bool IRAM_ATTR display_refresh_timer_cb(gptimer_handle_t timer, const gpt
     return pdFALSE;
 }
 
-void bsp_display_set_string(const char *str) {
+void bsp_display_set_string(const char* str) {
     if (strlen(str) > BSP_DISP_MAX_CHAR) {
         ESP_LOGW(TAG, "Display content overflow, truncating display content");
     }

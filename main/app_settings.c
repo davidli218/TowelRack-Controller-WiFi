@@ -6,7 +6,7 @@
 
 #include "app_settings.h"
 
-static const char *TAG = "app_settings";
+static const char* TAG = "app_settings";
 
 #define NAME_SPACE "sys_param"
 #define KEY "param"
@@ -22,7 +22,7 @@ static const sys_param_t g_default_sys_param = {
 /**
  * @brief 检查系统参数是否合法，不合法时设置为默认值
  */
-static esp_err_t settings_check(sys_param_t *param) {
+static esp_err_t settings_check(sys_param_t* param) {
     esp_err_t ret = ESP_OK;
     ESP_GOTO_ON_FALSE(param->magic == MAGIC_HEAD, ESP_ERR_INVALID_ARG, reset, TAG, "magic incorrect");
     return ret;
@@ -62,9 +62,7 @@ esp_err_t settings_read_parameter_from_nvs(void) {
     settings_check(&g_sys_param);
     return ret;
 err:
-    if (my_handle) {
-        nvs_close(my_handle);
-    }
+    if (my_handle) { nvs_close(my_handle); }
     return ret;
 }
 
@@ -78,6 +76,7 @@ esp_err_t settings_write_parameter_to_nvs(void) {
 
     nvs_handle_t my_handle = {0};
     esp_err_t err = nvs_open(NAME_SPACE, NVS_READWRITE, &my_handle);
+
     if (err != ESP_OK) {
         ESP_LOGI(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     } else {
@@ -85,6 +84,7 @@ esp_err_t settings_write_parameter_to_nvs(void) {
         err |= nvs_commit(my_handle);
         nvs_close(my_handle);
     }
+
     return ESP_OK == err ? ESP_OK : ESP_FAIL;
 }
 

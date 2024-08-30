@@ -20,7 +20,7 @@ void bsp_display_init(void);
  *
  * @param str 要显示的字符串
  */
-void bsp_display_set_string(const char *str);
+void bsp_display_set_string(const char* str);
 
 /**
  * @brief 设置数码管显示整数

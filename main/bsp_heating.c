@@ -1,7 +1,7 @@
 #include "bsp_heating.h"
 #include "ntc_driver.h"
 
-__unused static const char *TAG = "bsp_heating";
+__unused static const char* TAG = "bsp_heating";
 
 static ntc_device_handle_t ntc = NULL;
 

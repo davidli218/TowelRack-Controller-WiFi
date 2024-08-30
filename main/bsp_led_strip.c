@@ -1,7 +1,7 @@
 #include "bsp_led_strip.h"
 #include "led_indicator.h"
 
-__unused static const char *TAG = "bsp_led_strip";
+__unused static const char* TAG = "bsp_led_strip";
 
 led_indicator_handle_t led_handle = NULL;
 
@@ -42,7 +42,7 @@ static const blink_step_t flowing_blink[] = {
     {LED_BLINK_LOOP, 0, 0},
 };
 
-blink_step_t const *led_mode[] = {
+blink_step_t const* led_mode[] = {
 
     [BLINK_ORANGE] = orange_blink,
     [BLINK_BLUE] = blue_blink,
