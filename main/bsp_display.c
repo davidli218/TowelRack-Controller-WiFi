@@ -9,59 +9,68 @@
 
 __unused static const char* TAG = "bsp_display";
 
-static bool g_display_status = false;                       // 显示是否开启
-static bool g_display_c_flag = false;                       // 是否显示C标志
-static bool g_display_h_flag = false;                       // 是否显示H标志
-static char g_display_content[BSP_DISP_MAX_CHAR + 1] = {0}; // 显示内容
-static uint8_t g_display_buffer[BSP_DISP_MAX_CHAR] = {0};   // 显示缓冲区
+static struct {
+    bool status;                         // 显示是否开启
+    bool c_flag;                         // 是否显示C标志
+    bool h_flag;                         // 是否显示H标志
+    char content[BSP_DISP_MAX_CHAR + 1]; // 显示内容
+    uint8_t buffer[BSP_DISP_MAX_CHAR];   // 显示缓冲区
+} display_context = {
+    .status = false,
+    .c_flag = false,
+    .h_flag = false,
+    .content = {0},
+    .buffer = {0},
+};
 
 static gptimer_handle_t display_gptimer_handle; // LED数码管刷新定时器句柄
 
-/* LED数码管字符列表 */
-static const uint8_t display_pattern_array[12][7] = {
-    {0, 0, 0, 0, 0, 0, 0}, // None
-    {0, 1, 1, 0, 0, 0, 0}, // 1
-    {1, 1, 0, 1, 1, 0, 1}, // 2
-    {1, 1, 1, 1, 0, 0, 1}, // 3
-    {0, 1, 1, 0, 0, 1, 1}, // 4
-    {1, 0, 1, 1, 0, 1, 1}, // 5
-    {1, 0, 1, 1, 1, 1, 1}, // 6
-    {1, 1, 1, 0, 0, 0, 0}, // 7
-    {1, 1, 1, 1, 1, 1, 1}, // 8
-    {1, 1, 1, 1, 0, 1, 1}, // 9
-    {1, 1, 1, 1, 1, 1, 0}, // 0
-    {1, 0, 0, 1, 1, 1, 1}, // E
-};
+/**
+ * @brief 关闭所有数码管显示
+ */
+static void display_disable_output() {
+    gpio_set_level(BSP_DISP_U1_CTRL, 1);
+    gpio_set_level(BSP_DISP_U2_CTRL, 1);
+}
 
 /**
- * @brief 获取字符在LED数码管字符列表中的索引
- *
- * @param character 查询的字符
- *
- * @return 字符在数码管字符手册中的索引, 无法识别的字符返回空白字符索引
+ * @brief 打开1号数码管显示
  */
-static int display_get_pattern_index(const char character) {
+static void display_enable_u1() { gpio_set_level(BSP_DISP_U1_CTRL, 0); }
+
+/**
+ * @brief 打开2号数码管
+ */
+static void display_enable_u2() { gpio_set_level(BSP_DISP_U2_CTRL, 0); }
+
+/**
+ * @brief 获取字符对应的数码管段亮灯配置
+ *
+ * @param character 目标字符
+ * @return 数码管段亮灯配置。低7位从高到低为[A-G]
+ */
+static uint8_t display_get_segment_pattern(const char character) {
     switch (character) {
-        case '1': return 1;
-        case '2': return 2;
-        case '3': return 3;
-        case '4': return 4;
-        case '5': return 5;
-        case '6': return 6;
-        case '7': return 7;
-        case '8': return 8;
-        case '9': return 9;
-        case '0': return 10;
-        case 'E': return 11;
+        case '1': return 0b0110000;
+        case '2': return 0b1101101;
+        case '3': return 0b1111001;
+        case '4': return 0b0110011;
+        case '5': return 0b1011011;
+        case '6': return 0b1011111;
+        case '7': return 0b1110000;
+        case '8': return 0b1111111;
+        case '9': return 0b1111011;
+        case '0': return 0b1111110;
+        case 'E': return 0b1001111;
         default:
-            return 0;
+            return 0b0000000;
     }
 }
 
 /**
  * @brief 向74HC595发送一个字节
  */
-static void display_ic_send_byte(uint8_t data) {
+static void display_74hc595_send_byte(uint8_t data) {
     for (int i = 0; i < 8; i++) {
         gpio_set_level(BSP_DISP_IC_DS, (data & 0x80) ? 1 : 0);
         data <<= 1;
@@ -73,67 +82,55 @@ static void display_ic_send_byte(uint8_t data) {
 /**
  * @brief 刷新74HC595输出
  */
-static void display_ic_refresh(void) {
+static void display_74hc595_toggle_output(void) {
     gpio_set_level(BSP_DISP_IC_STCP, 0);
     gpio_set_level(BSP_DISP_IC_STCP, 1);
-}
-
-/**
- * @brief 关闭所有数码管段
- */
-static void display_disable_all_seg() {
-    gpio_set_level(BSP_DISP_U1_CTRL, 1);
-    gpio_set_level(BSP_DISP_U2_CTRL, 1);
 }
 
 /**
  * @brief 刷新显示缓冲区
  */
 static void display_flush_buffer(void) {
-    for (int i = 0; i < BSP_DISP_MAX_CHAR; i++) {
-        int pattern_index = display_get_pattern_index(g_display_content[i]);
+    memset(display_context.buffer, 0, sizeof(display_context.buffer));
 
-        uint8_t buf_temp = 0;
-        for (int j = 0; j < 7; j++) {
-            buf_temp |= display_pattern_array[pattern_index][j] << j;
-        }
-
-        g_display_buffer[i] = buf_temp << 1;
+    for (int i = 0; i < strlen(display_context.content); i++) {
+        display_context.buffer[i] = display_get_segment_pattern(display_context.content[i]) << 1;
     }
 
-    if (g_display_c_flag) g_display_buffer[0] |= 0x01;
-    if (g_display_h_flag) g_display_buffer[1] |= 0x01;
+    if (display_context.c_flag) { display_context.buffer[0] |= 0x01; }
+    if (display_context.h_flag) { display_context.buffer[1] |= 0x01; }
 }
 
 /**
- * @brief 清空显示缓冲区 & 关闭所有数码管 & 清空74HC595
+ * @brief 清空74HC595 & 清空显示上下文变量
  */
 static void display_clear_all(void) {
-    g_display_c_flag = false;
-    g_display_h_flag = false;
-    memset(g_display_content, 0, sizeof(g_display_content));
-    memset(g_display_buffer, 0, sizeof(g_display_buffer));
+    /* 1. 清空显示状态变量 */
+    display_context.c_flag = false;
+    display_context.h_flag = false;
+    memset(display_context.content, 0, sizeof(display_context.content));
+    memset(display_context.buffer, 0, sizeof(display_context.buffer));
 
-    display_disable_all_seg();
-    display_ic_send_byte(0);
-    display_ic_refresh();
+    /* 2. 清空74HC595 */
+    display_74hc595_send_byte(0);
+    display_74hc595_toggle_output();
 }
 
 /**
  * @brief (数码管刷新定时器回调函数) 利用显示缓冲区刷新数码管
  */
+// ReSharper disable once CppDFAConstantFunctionResult
 static bool IRAM_ATTR display_refresh_timer_cb(
-    gptimer_handle_t timer, const gptimer_alarm_event_data_t* event,
-    void* user_data
+    gptimer_handle_t timer, const gptimer_alarm_event_data_t* event, void* user_data
 ) {
     static int current_digit;
 
     if (current_digit >= BSP_DISP_MAX_CHAR) current_digit = 0;
 
-    display_ic_send_byte(g_display_buffer[current_digit]);
-    display_disable_all_seg();
-    display_ic_refresh();
-    gpio_set_level((current_digit == 0) ? BSP_DISP_U1_CTRL : BSP_DISP_U2_CTRL, 0);
+    display_74hc595_send_byte(display_context.buffer[current_digit]);
+    display_disable_output();
+    display_74hc595_toggle_output();
+    current_digit == 0 ? display_enable_u1() : display_enable_u2();
 
     current_digit++;
 
@@ -145,56 +142,69 @@ void bsp_display_set_string(const char* str) {
         ESP_LOGW(TAG, "Display content overflow, truncating display content");
     }
 
-    memset(g_display_content, 0, sizeof(g_display_content));
-    strncpy(g_display_content, str, BSP_DISP_MAX_CHAR);
+    strncpy(display_context.content, str, BSP_DISP_MAX_CHAR);
+
+    if (strlen(str) < BSP_DISP_MAX_CHAR) {
+        display_context.content[strlen(str)] = '\0';
+    } else {
+        display_context.content[BSP_DISP_MAX_CHAR] = '\0';
+    }
 
     display_flush_buffer();
 }
 
 void bsp_display_set_int(const int num) {
     char str[BSP_DISP_MAX_CHAR + 1];
+
     snprintf(str, sizeof(str), "%d", num);
+
     bsp_display_set_string(str);
 }
 
 void bsp_display_set_c_flag(const bool flag) {
-    g_display_c_flag = flag;
+    display_context.c_flag = flag;
     display_flush_buffer();
 }
 
 void bsp_display_set_h_flag(const bool flag) {
-    g_display_h_flag = flag;
+    display_context.h_flag = flag;
     display_flush_buffer();
 }
 
 void bsp_display_pause(void) {
-    if (!g_display_status) return;
+    if (!display_context.status) return;
 
     ESP_ERROR_CHECK(gptimer_stop(display_gptimer_handle));
+    display_disable_output();
     display_clear_all();
 
-    g_display_status = false;
+    display_context.status = false;
 }
 
 void bsp_display_resume(void) {
-    if (g_display_status) return;
+    if (display_context.status) return;
 
     ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
 
-    g_display_status = true;
+    display_context.status = true;
 }
 
 void bsp_display_init(void) {
-    // 初始化74HC595所需的引脚
-    const gpio_config_t io_conf = {
+    // 初始化74HC595与数码管控制IO
+    const gpio_config_t io_config = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = (1ULL << BSP_DISP_IC_DS) | (1ULL << BSP_DISP_IC_SHCP) | (1ULL << BSP_DISP_IC_STCP) |
-                        (1ULL << BSP_DISP_U1_CTRL) | (1ULL << BSP_DISP_U2_CTRL),
+        .pin_bit_mask = 1ULL << BSP_DISP_IC_DS | 1ULL << BSP_DISP_IC_SHCP | 1ULL << BSP_DISP_IC_STCP |
+                        1ULL << BSP_DISP_U1_CTRL | 1ULL << BSP_DISP_U2_CTRL,
         .pull_down_en = 0,
         .pull_up_en = 0,
     };
-    gpio_config(&io_conf);
+    gpio_config(&io_config);
+
+    // 初始化全局变量与74HC595
+    display_disable_output();
+    display_clear_all();
+    display_context.status = false;
 
     // 初始化数码管刷新定时器
     const gptimer_config_t gptimer_config = {
@@ -215,8 +225,4 @@ void bsp_display_init(void) {
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(display_gptimer_handle, &gptimer_callbacks, NULL));
     ESP_ERROR_CHECK(gptimer_enable(display_gptimer_handle));
     ESP_ERROR_CHECK(gptimer_set_alarm_action(display_gptimer_handle, &alarm_config));
-
-    // 关闭数码管显示 & 重置全局变量
-    g_display_status = false;
-    display_clear_all();
 }
