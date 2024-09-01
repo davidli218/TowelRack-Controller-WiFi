@@ -54,8 +54,8 @@ static const button_event_config_t btn_mt8_click_config = {
 
 /* ------------------------ 输入设备中断回调函数 ------------------------ */
 
-static void bsp_input_event_cb(void* arg, void* data) {
-    const bsp_input_event_t event = (uintptr_t)arg;
+static void bsp_input_event_cb(void* _, void* usr_data) {
+    const bsp_input_event_t event = (uintptr_t)usr_data;
     xQueueSendFromISR(bsp_input_queue, &event, NULL);
 }
 
