@@ -37,24 +37,6 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 0.1.5
-  espressif/led_indicator:
-    component_hash: 8ffbd4d0c3f996c10b5d4d23e1f13fa012684e7f97369a0d5442b8d58e6b587f
-    dependencies:
-    - name: espressif/cmake_utilities
-      registry_url: https://components.espressif.com/
-      require: private
-      version: 0.*
-    - name: idf
-      require: private
-      version: '>=4.0'
-    - name: espressif/led_strip
-      registry_url: https://components.espressif.com/
-      require: public
-      version: '>=2.5.2'
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 0.9.3
   espressif/led_strip:
     component_hash: 28c6509a727ef74925b372ed404772aeedf11cce10b78c3f69b3c66799095e2d
     dependencies:
@@ -86,9 +68,9 @@ dependencies:
 direct_dependencies:
 - espressif/button
 - espressif/knob
-- espressif/led_indicator
+- espressif/led_strip
 - espressif/ntc_driver
 - idf
-manifest_hash: 9983f571bb60cf649909c94f1671a853a2c5ccac8e3b6fea096405a06d70fa75
+manifest_hash: 7d2ecea864337882ae3114f4fe29b168732c9f5a3419a8c2a05a1c8d443b7cdc
 target: esp32c3
 version: 2.0.0

@@ -2,6 +2,7 @@
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "led_strip.h"
 
 #include "app_tasks.h"
 #include "bsp_display.h"
@@ -18,8 +19,7 @@ const int target_temperature_max = 60;
 const int target_time_hours_min = 0;
 const int target_time_hours_max = 24;
 
-extern QueueHandle_t bsp_input_queue;     // 输入事件队列
-extern led_indicator_handle_t led_handle; // LED指示灯句柄
+extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
 /* 系统状态 */
 static struct {
@@ -76,7 +76,7 @@ static void app_status_turn_on(void) {
     app_context.target_time_hours = target_time_hours_default;
 
     /* 2. 启动LED指示灯 */
-    // led_indicator_start(led_handle, BLINK_ORANGE);
+    bsp_led_on();
 
     /* 3. 切换到温度控制交互任务 */
     switch_app_status(APP_STATUS_TEMP_INTERACT);
@@ -96,7 +96,7 @@ static void app_status_turn_off(void) {
     switch_app_status(APP_STATUS_SLEEP);
 
     /* 3. 关闭LED指示灯 */
-    // led_indicator_stop(led_handle, BLINK_ORANGE);
+    bsp_led_off();
 }
 
 /**
