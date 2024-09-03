@@ -278,15 +278,37 @@ _Noreturn static void fe_status_watchdog(__attribute__((unused)) void* pvParamet
  * @brief [RT任务]加热控制任务
  */
 _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
+    /* 升温模式: [0]干柴烈火, [1]贤者模式 */
+    uint8_t heating_status = 0;
     while (1) {
-        const int current_temperature = bsp_heating_get_temp();
+        if (!app_context.be_status_on) {
+            bsp_heating_disable();
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
 
+        const int current_temperature = bsp_heating_get_temp();
         ESP_LOGI(TAG, "Current temperature: %d", current_temperature);
 
-        if (app_context.be_status_on) {
-            current_temperature < app_context.target_temperature ? bsp_heating_enable() : bsp_heating_disable();
-        } else {
-            bsp_heating_disable();
+        switch (heating_status) {
+            case 0:
+                bsp_heating_enable();
+                if (current_temperature >= app_context.target_temperature) {
+                    app_context.idle_strip_mode = BSP_STRIP_GREEN;
+                    bsp_led_strip_write(app_context.idle_strip_mode);
+                    heating_status = 1;
+                }
+                break;
+            case 1:
+                bsp_heating_disable();
+                if (current_temperature < app_context.target_temperature - 5) {
+                    app_context.idle_strip_mode = BSP_STRIP_ORANGE;
+                    bsp_led_strip_write(app_context.idle_strip_mode);
+                    heating_status = 0;
+                }
+                break;
+            default:
+                ESP_LOGE(TAG, "Invalid heating status: %d", heating_status);
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000));
