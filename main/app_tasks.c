@@ -29,12 +29,14 @@ static struct {
     bsp_led_strip_mode_t idle_strip_mode; // 空闲状态灯带模式
     int target_temperature;               // 目标温度
     int target_time_hours;                // 目标时间
+    bool target_time_dirty;               // 目标时间是否被修改过
 } app_context = {
     .be_status_on = false,
     .fe_status = APP_FE_STATUS_IDLE,
     .idle_strip_mode = BSP_STRIP_OFF,
     .target_temperature = 0,
     .target_time_hours = 0,
+    .target_time_dirty = true,
 };
 
 static TaskHandle_t app_fe_status_watchdog_handle = NULL;
@@ -113,6 +115,7 @@ static void app_be_toggle_status(void) {
         app_context.target_temperature = 0;
         app_context.target_time_hours = 0;
     }
+    app_context.target_time_dirty = true;
 
     /* 更新灯带状态 */
     bsp_led_strip_write(app_context.idle_strip_mode);
@@ -167,6 +170,7 @@ static void timer_inter_handler(const bsp_input_event_t event) {
             return;
     }
 
+    app_context.target_time_dirty = true;
     xTaskNotifyGive(app_fe_status_watchdog_handle);
 
     if (app_context.target_time_hours < target_time_hours_min) {
@@ -316,6 +320,36 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
 }
 
 /**
+ * @brief [RT任务]定时开关机任务
+ */
+_Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
+    int rest_min = 0;
+    while (1) {
+        if (app_context.target_time_hours == 0) {
+            vTaskDelay(pdMS_TO_TICKS(5000)); // 5秒检查一次
+            continue;
+        }
+
+        if (app_context.target_time_dirty) {
+            rest_min = app_context.target_time_hours;
+            app_context.target_time_dirty = false;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(60000)); // 1分钟检查一次
+        rest_min--;
+
+        if (app_context.target_time_dirty) { continue; }
+
+        if (rest_min == 0) {
+            app_be_toggle_status();
+            continue;
+        }
+
+        app_context.target_time_hours = rest_min;
+    }
+}
+
+/**
  * @brief 初始化系统任务
  */
 void app_tasks_init(void) {
@@ -332,5 +366,9 @@ void app_tasks_init(void) {
     xTaskCreate(
         // 创建加热控制任务
         heating_task, "HeatingTask", 2048, NULL, 10, NULL
+    );
+    xTaskCreate(
+        // 创建定时开关机任务
+        power_on_off_task, "PowerOnOffTask", 2048, NULL, 10, NULL
     );
 }
