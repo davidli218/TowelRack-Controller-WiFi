@@ -21,88 +21,92 @@ const int target_time_hours_max = 24;
 
 extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
-/* 系统状态 */
+/* 系统状态变量 */
 static struct {
-    app_status_t status;    // 系统状态
-    int target_temperature; // 目标温度
-    int target_time_hours;  // 目标时间
+    bool be_status_on;               // 后台状态
+    app_frontend_status_t fe_status; // 前台状态
+    int target_temperature;          // 目标温度
+    int target_time_hours;           // 目标时间
 } app_context = {
-    .status = APP_STATUS_SLEEP,
-    .target_temperature = target_temperature_default,
-    .target_time_hours = target_time_hours_default
+    .be_status_on = false,
+    .fe_status = APP_FE_STATUS_IDLE,
+    .target_temperature = 0,
+    .target_time_hours = 0,
 };
 
+static TaskHandle_t app_fe_status_watchdog_handle = NULL;
+
 /**
- * @brief 刷新显示器内容
+ * @brief 根据系统状态刷新显示内容
  */
-static void refresh_display(const bool digit_only) {
-    switch (app_context.status) {
-        case APP_STATUS_TEMP_INTERACT:
-            bsp_display_set_int(app_context.target_temperature);
+static void app_refresh_display(void) {
+    bsp_display_set_c_flag(
+        app_context.fe_status == APP_FE_STATUS_TEMP_INTERACT ||
+        (app_context.be_status_on == true && app_context.fe_status == APP_FE_STATUS_IDLE)
+    );
+    bsp_display_set_h_flag(app_context.fe_status == APP_FE_STATUS_TIMER_INTERACT);
+
+    switch (app_context.fe_status) {
+        case APP_FE_STATUS_TEMP_INTERACT:
+            bsp_display_write_int(app_context.target_temperature);
             break;
-        case APP_STATUS_TIMER_INTERACT:
-            bsp_display_set_int(app_context.target_time_hours);
+        case APP_FE_STATUS_TIMER_INTERACT:
+            bsp_display_write_int(app_context.target_time_hours);
+            break;
+        case APP_FE_STATUS_IDLE:
+            app_context.be_status_on
+                ? bsp_display_write_int(app_context.target_temperature)
+                : bsp_display_write_str(NULL);
             break;
         default:
-            break;
-    }
-
-    if (!digit_only) {
-        bsp_display_set_c_flag(app_context.status == APP_STATUS_TEMP_INTERACT);
-        bsp_display_set_h_flag(app_context.status == APP_STATUS_TIMER_INTERACT);
+            ESP_LOGE(TAG, "Invalid app frontend status to display: %d", app_context.fe_status);
     }
 }
 
 /**
- * @brief 切换应用状态
+ * @brief 切换应用前台状态
  */
-static void switch_app_status(const app_status_t status) {
-    /* 如果状态未发生变化则直接返回 */
-    if (app_context.status == status) { return; }
+static void app_fe_switch_status(const app_frontend_status_t status) {
+    /* 喂狗 */
+    xTaskNotifyGive(app_fe_status_watchdog_handle);
 
     /* 更新任务状态并重置输入队列 */
-    app_context.status = status;
+    app_context.fe_status = status;
     xQueueReset(bsp_input_queue);
 
-    refresh_display(false);
+    /* 强制更新显示内容 */
+    app_refresh_display();
 }
 
 /**
- * @brief 应用状态级开机
+ * @brief 切换应用后台状态
  */
-static void app_status_turn_on(void) {
-    /* 1. 恢复默认系统状态参数 */
-    app_context.target_temperature = target_temperature_default;
-    app_context.target_time_hours = target_time_hours_default;
+static void app_be_toggle_status(void) {
+    /* 切换后台状态 */
+    app_context.be_status_on = !app_context.be_status_on;
 
-    /* 2. 启动LED指示灯 */
-    bsp_led_on();
+    /* 恢复应用目标参数 */
+    if (app_context.be_status_on) {
+        app_context.target_temperature = target_temperature_default;
+        app_context.target_time_hours = target_time_hours_default;
+    } else {
+        app_context.target_temperature = 0;
+        app_context.target_time_hours = 0;
+    }
 
-    /* 3. 切换到温度控制交互任务 */
-    switch_app_status(APP_STATUS_TEMP_INTERACT);
+    /* 更新灯带状态 */
+    app_context.be_status_on ? bsp_led_on() : bsp_led_off();
 
-    /* 4. 恢复显示器 */
-    bsp_display_resume();
+    /* 更新前台状态, 开关机后默认进入空闲状态 */
+    app_fe_switch_status(APP_FE_STATUS_IDLE);
 }
 
 /**
- * @brief 应用状态级关机
+ * @brief 温度交互事件处理
+ *
+ * @param event 设备输入事件
  */
-static void app_status_turn_off(void) {
-    /* 1. 关闭显示器 */
-    bsp_display_pause();
-
-    /* 2. 切换到休眠任务 */
-    switch_app_status(APP_STATUS_SLEEP);
-
-    /* 3. 关闭LED指示灯 */
-    bsp_led_off();
-}
-
-/**
- * @brief 温度交互任务输入处理器
- */
-static void app_inter_task_temp_input_handler(const bsp_input_event_t event) {
+static void temp_inter_handler(const bsp_input_event_t event) {
     switch (event) {
         case BSP_KNOB_ENCODER_ACW:
             app_context.target_temperature--;
@@ -111,8 +115,10 @@ static void app_inter_task_temp_input_handler(const bsp_input_event_t event) {
             app_context.target_temperature++;
             break;
         default:
-            break;
+            return;
     }
+
+    xTaskNotifyGive(app_fe_status_watchdog_handle);
 
     if (app_context.target_temperature < target_temperature_min) {
         app_context.target_temperature = target_temperature_max;
@@ -122,14 +128,14 @@ static void app_inter_task_temp_input_handler(const bsp_input_event_t event) {
     }
 
     ESP_LOGI(TAG, "Target temperature changed: %d", app_context.target_temperature);
-
-    refresh_display(true);
 }
 
 /**
- * 定时交互任务输入处理器
+ * @brief 定时交互事件处理
+ *
+ * @param event 设备输入事件
  */
-static void app_inter_timer_temp_input_handler(const bsp_input_event_t event) {
+static void timer_inter_handler(const bsp_input_event_t event) {
     switch (event) {
         case BSP_KNOB_ENCODER_ACW:
             app_context.target_time_hours--;
@@ -138,8 +144,10 @@ static void app_inter_timer_temp_input_handler(const bsp_input_event_t event) {
             app_context.target_time_hours++;
             break;
         default:
-            break;
+            return;
     }
+
+    xTaskNotifyGive(app_fe_status_watchdog_handle);
 
     if (app_context.target_time_hours < target_time_hours_min) {
         app_context.target_time_hours = target_time_hours_max;
@@ -149,8 +157,60 @@ static void app_inter_timer_temp_input_handler(const bsp_input_event_t event) {
     }
 
     ESP_LOGI(TAG, "Target time changed: %d", app_context.target_time_hours);
+}
 
-    refresh_display(true);
+/**
+ * @brief 处理系统开启状态下的用户输入事件
+ *
+ * @param event 设备输入事件
+ */
+static void app_be_active_status_input_handler(const bsp_input_event_t event) {
+    /* 处理按钮切换前台任务事件 */
+    if (event == BSP_TOUCH_BUTTON_L_CLICK || event == BSP_TOUCH_BUTTON_R_CLICK) {
+        app_fe_switch_status(
+            event == BSP_TOUCH_BUTTON_L_CLICK ? APP_FE_STATUS_TEMP_INTERACT : APP_FE_STATUS_TIMER_INTERACT
+        );
+        return;
+    }
+
+    /* 其余输入事件根据前台任务状态分发 */
+    switch (app_context.fe_status) {
+        case APP_FE_STATUS_TEMP_INTERACT:
+            temp_inter_handler(event);
+            break;
+        case APP_FE_STATUS_TIMER_INTERACT:
+            timer_inter_handler(event);
+            break;
+        default:
+            break;
+    }
+
+    app_refresh_display();
+}
+
+/**
+ * @brief 处理系统休眠状态下的用户输入事件
+ *
+ * @param event 设备输入事件
+ */
+static void app_be_sleep_status_input_handler(const bsp_input_event_t event) {
+    /* 处理显示系统信息事件 */
+    if (app_context.fe_status == APP_FE_STATUS_IDLE && event == BSP_KNOB_MT8_CLICK) {
+        ESP_LOGI(TAG, "System version: %s", esp_get_idf_version());
+        return;
+    }
+
+    /* 处理按钮切换前台任务事件, 休眠状态下只允许定时任务 */
+    if (event == BSP_TOUCH_BUTTON_R_CLICK) { app_fe_switch_status(APP_FE_STATUS_TIMER_INTERACT); }
+
+    /* 其余输入事件根据前台任务状态分发 */
+    switch (app_context.fe_status) {
+        case APP_FE_STATUS_TIMER_INTERACT:
+            timer_inter_handler(event);
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -168,38 +228,28 @@ _Noreturn static void input_redirect_task(__attribute__((unused)) void* pvParame
 
         /* 拦截处理长按按钮事件，实现系统开关 */
         if (event == BSP_KNOB_LONG_PRESS) {
-            app_context.status == APP_STATUS_SLEEP ? app_status_turn_on() : app_status_turn_off();
+            app_be_toggle_status();
             continue;
         }
 
-        /* 拦截处理关机状态下的事件 */
-        if (app_context.status == APP_STATUS_SLEEP) {
-            if (event == BSP_KNOB_MT8_CLICK) {
-                ESP_LOGI(TAG, "System version: %s", esp_get_idf_version());
-            }
-            continue;
-        }
+        /* 根据当前后端状态分发事件处理 */
+        app_context.be_status_on
+            ? app_be_active_status_input_handler(event)
+            : app_be_sleep_status_input_handler(event);
+    }
+}
 
-        /* 拦截处理系统级别的输入事件 */
-        if (event == BSP_TOUCH_BUTTON_L_CLICK) {
-            switch_app_status(APP_STATUS_TEMP_INTERACT);
-            continue;
-        }
-        if (event == BSP_TOUCH_BUTTON_R_CLICK) {
-            switch_app_status(APP_STATUS_TIMER_INTERACT);
-            continue;
-        }
+/**
+ * @brief [RT任务]前台状态看门狗
+ *
+ * 监视前台任务，如果一段时间前台任务没有被控制，就把app_context.fe_status设为APP_FE_STATUS_IDLE
+ */
+_Noreturn static void fe_status_watchdog(__attribute__((unused)) void* pvParameters) {
+    while (true) {
+        const uint32_t notify_value = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(3000));
 
-        /* 转发其他输入事件到前台交互任务 */
-        switch (app_context.status) {
-            case APP_STATUS_TEMP_INTERACT:
-                app_inter_task_temp_input_handler(event);
-                break;
-            case APP_STATUS_TIMER_INTERACT:
-                app_inter_timer_temp_input_handler(event);
-                break;
-            default:
-                break;
+        if (notify_value == 0 && app_context.fe_status != APP_FE_STATUS_IDLE) {
+            app_fe_switch_status(APP_FE_STATUS_IDLE);
         }
     }
 }
@@ -213,10 +263,10 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
 
         ESP_LOGI(TAG, "Current temperature: %d", current_temperature);
 
-        if (app_context.status == APP_STATUS_SLEEP) {
-            bsp_heating_disable();
-        } else {
+        if (app_context.be_status_on) {
             current_temperature < app_context.target_temperature ? bsp_heating_enable() : bsp_heating_disable();
+        } else {
+            bsp_heating_disable();
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -229,6 +279,10 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
 void app_tasks_init(void) {
     assert(bsp_input_queue != NULL); // 输入事件队列必须先初始化
 
+    xTaskCreate(
+        // 创建前台状态看门狗任务
+        fe_status_watchdog, "FeStatusWatchdog", 2048, NULL, 10, &app_fe_status_watchdog_handle
+    );
     xTaskCreate(
         // 创建设备输入处理任务
         input_redirect_task, "InputRedirectTask", 2048, NULL, 10, NULL
