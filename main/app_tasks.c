@@ -24,13 +24,15 @@ extern QueueHandle_t bsp_input_queue; // 输入事件队列
 
 /* 系统状态变量 */
 static struct {
-    bool be_status_on;               // 后台状态
-    app_frontend_status_t fe_status; // 前台状态
-    int target_temperature;          // 目标温度
-    int target_time_hours;           // 目标时间
+    bool be_status_on;                    // 后台状态
+    app_frontend_status_t fe_status;      // 前台状态
+    bsp_led_strip_mode_t idle_strip_mode; // 空闲状态灯带模式
+    int target_temperature;               // 目标温度
+    int target_time_hours;                // 目标时间
 } app_context = {
     .be_status_on = false,
     .fe_status = APP_FE_STATUS_IDLE,
+    .idle_strip_mode = BSP_STRIP_OFF,
     .target_temperature = 0,
     .target_time_hours = 0,
 };
@@ -75,6 +77,21 @@ static void app_fe_switch_status(const app_frontend_status_t status) {
     app_context.fe_status = status;
     xQueueReset(bsp_input_queue);
 
+    /* 更新灯带状态 */
+    switch (app_context.fe_status) {
+        case APP_FE_STATUS_IDLE:
+            bsp_led_strip_write(app_context.idle_strip_mode);
+            break;
+        case APP_FE_STATUS_TEMP_INTERACT:
+            bsp_led_strip_write(BSP_STRIP_RED);
+            break;
+        case APP_FE_STATUS_TIMER_INTERACT:
+            bsp_led_strip_write(BSP_STRIP_BLUE);
+            break;
+        default:
+            break;
+    }
+
     /* 强制更新显示内容 */
     app_refresh_display();
 }
@@ -88,15 +105,17 @@ static void app_be_toggle_status(void) {
 
     /* 恢复应用目标参数 */
     if (app_context.be_status_on) {
+        app_context.idle_strip_mode = BSP_STRIP_ORANGE;
         app_context.target_temperature = target_temperature_default;
         app_context.target_time_hours = target_time_hours_default;
     } else {
+        app_context.idle_strip_mode = BSP_STRIP_OFF;
         app_context.target_temperature = 0;
         app_context.target_time_hours = 0;
     }
 
     /* 更新灯带状态 */
-    app_context.be_status_on ? bsp_led_on() : bsp_led_off();
+    bsp_led_strip_write(app_context.idle_strip_mode);
 
     /* 更新前台状态, 开关机后默认进入空闲状态 */
     app_fe_switch_status(APP_FE_STATUS_IDLE);

@@ -8,15 +8,36 @@ __unused static const char* TAG = "bsp_led_strip";
 
 static led_strip_handle_t led_strip = NULL;
 
-void bsp_led_on(void) {
-    for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 255, 76, 10));
+void bsp_led_strip_write(const bsp_led_strip_mode_t mode) {
+    switch (mode) {
+        case BSP_STRIP_OFF:
+            ESP_ERROR_CHECK(led_strip_clear(led_strip));
+            break;
+        case BSP_STRIP_ORANGE:
+            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 255, 76, 10));
+            }
+            break;
+        case BSP_STRIP_RED:
+            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 255, 0, 0));
+            }
+            break;
+        case BSP_STRIP_GREEN:
+            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 0, 255, 0));
+            }
+            break;
+        case BSP_STRIP_BLUE:
+            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 0, 0, 255));
+            }
+            break;
+        default:
+            break;
     }
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-}
 
-void bsp_led_off(void) {
-    ESP_ERROR_CHECK(led_strip_clear(led_strip));
+    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
 }
 
 void bsp_led_strip_init(void) {
