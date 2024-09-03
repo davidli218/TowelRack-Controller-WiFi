@@ -16,35 +16,25 @@
 void bsp_display_init(void);
 
 /**
- * @brief 设置数码管显示字符串
+ * @brief 设置数码管显示字符串, 并立刻显示
  *
  * @param str 要显示的字符串
  */
-void bsp_display_set_string(const char* str);
+void bsp_display_write_str(const char* str);
 
 /**
- * @brief 设置数码管显示整数
+ * @brief 设置数码管显示整数, 并立刻显示
  *
  * @param num 要显示的整数
  */
-void bsp_display_set_int(int num);
+void bsp_display_write_int(int num);
 
 /**
- * @brief 设置数码管是否显示C标志
+ * @brief 设置数码管是否显示C标志, 不会立刻显示
  */
 void bsp_display_set_c_flag(bool flag);
 
 /**
- * @brief 设置数码管是否显示H标志
+ * @brief 设置数码管是否显示H标志, 不会立刻显示
  */
 void bsp_display_set_h_flag(bool flag);
-
-/**
- * @brief 暂停数码管显示
- */
-void bsp_display_pause(void);
-
-/**
- * @brief 恢复数码管显示
- */
-void bsp_display_resume(void);

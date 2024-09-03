@@ -116,6 +116,24 @@ static void display_clear_all(void) {
     display_74hc595_toggle_output();
 }
 
+static void display_pause(void) {
+    if (!display_context.status) return;
+
+    ESP_ERROR_CHECK(gptimer_stop(display_gptimer_handle));
+    display_disable_output();
+    display_clear_all();
+
+    display_context.status = false;
+}
+
+static void display_resume(void) {
+    if (display_context.status) return;
+
+    ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
+
+    display_context.status = true;
+}
+
 /**
  * @brief (数码管刷新定时器回调函数) 利用显示缓冲区刷新数码管
  */
@@ -137,7 +155,14 @@ static bool IRAM_ATTR display_refresh_timer_cb(
     return pdFALSE;
 }
 
-void bsp_display_set_string(const char* str) {
+void bsp_display_write_str(const char* str) {
+    if (str == NULL || strlen(str) == 0) {
+        display_pause();
+        return;
+    }
+
+    display_resume();
+
     if (strlen(str) > BSP_DISP_MAX_CHAR) {
         ESP_LOGW(TAG, "Display content overflow, truncating display content");
     }
@@ -153,41 +178,17 @@ void bsp_display_set_string(const char* str) {
     display_flush_buffer();
 }
 
-void bsp_display_set_int(const int num) {
+void bsp_display_write_int(const int num) {
     char str[BSP_DISP_MAX_CHAR + 1];
 
     snprintf(str, sizeof(str), "%d", num);
 
-    bsp_display_set_string(str);
+    bsp_display_write_str(str);
 }
 
-void bsp_display_set_c_flag(const bool flag) {
-    display_context.c_flag = flag;
-    display_flush_buffer();
-}
+void bsp_display_set_c_flag(const bool flag) { display_context.c_flag = flag; }
 
-void bsp_display_set_h_flag(const bool flag) {
-    display_context.h_flag = flag;
-    display_flush_buffer();
-}
-
-void bsp_display_pause(void) {
-    if (!display_context.status) return;
-
-    ESP_ERROR_CHECK(gptimer_stop(display_gptimer_handle));
-    display_disable_output();
-    display_clear_all();
-
-    display_context.status = false;
-}
-
-void bsp_display_resume(void) {
-    if (display_context.status) return;
-
-    ESP_ERROR_CHECK(gptimer_start(display_gptimer_handle));
-
-    display_context.status = true;
-}
+void bsp_display_set_h_flag(const bool flag) { display_context.h_flag = flag; }
 
 void bsp_display_init(void) {
     // 初始化74HC595与数码管控制IO
