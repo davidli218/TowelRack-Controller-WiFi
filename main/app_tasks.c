@@ -12,6 +12,7 @@
 
 __unused static const char* TAG = "app_tasks";
 
+const int fe_task_hold_time = 5000; // 前台任务保持时间
 const int target_temperature_default = 50;
 const int target_time_hours_default = 3;
 const int target_temperature_min = 40;
@@ -246,7 +247,7 @@ _Noreturn static void input_redirect_task(__attribute__((unused)) void* pvParame
  */
 _Noreturn static void fe_status_watchdog(__attribute__((unused)) void* pvParameters) {
     while (true) {
-        const uint32_t notify_value = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(3000));
+        const uint32_t notify_value = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(fe_task_hold_time));
 
         if (notify_value == 0 && app_context.fe_status != APP_FE_STATUS_IDLE) {
             app_fe_switch_status(APP_FE_STATUS_IDLE);
