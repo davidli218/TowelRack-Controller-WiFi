@@ -225,7 +225,10 @@ static void app_be_sleep_status_input_handler(const bsp_input_event_t event) {
     }
 
     /* 处理按钮切换前台任务事件, 休眠状态下只允许定时任务 */
-    if (event == BSP_TOUCH_BUTTON_R_CLICK) { app_fe_switch_status(APP_FE_STATUS_TIMER_INTERACT); }
+    if (event == BSP_TOUCH_BUTTON_R_CLICK) {
+        app_fe_switch_status(APP_FE_STATUS_TIMER_INTERACT);
+        return;
+    }
 
     /* 其余输入事件根据前台任务状态分发 */
     switch (app_context.fe_status) {
@@ -235,6 +238,8 @@ static void app_be_sleep_status_input_handler(const bsp_input_event_t event) {
         default:
             break;
     }
+
+    app_refresh_display();
 }
 
 /**
