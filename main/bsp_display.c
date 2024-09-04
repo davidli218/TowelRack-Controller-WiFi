@@ -51,17 +51,18 @@ static void display_enable_u2() { gpio_set_level(BSP_DISP_U2_CTRL, 0); }
  */
 static uint8_t display_get_segment_pattern(const char character) {
     switch (character) {
-        case '1': return 0b0110000;
-        case '2': return 0b1101101;
-        case '3': return 0b1111001;
-        case '4': return 0b0110011;
-        case '5': return 0b1011011;
-        case '6': return 0b1011111;
-        case '7': return 0b1110000;
+        /* G F E D C B A */
+        case '1': return 0b0000110;
+        case '2': return 0b1011011;
+        case '3': return 0b1001111;
+        case '4': return 0b1100110;
+        case '5': return 0b1101101;
+        case '6': return 0b1111101;
+        case '7': return 0b0000111;
         case '8': return 0b1111111;
-        case '9': return 0b1111011;
-        case '0': return 0b1111110;
-        case 'E': return 0b1001111;
+        case '9': return 0b1101111;
+        case '0': return 0b0111111;
+        case 'E': return 0b1111001;
         default:
             return 0b0000000;
     }
