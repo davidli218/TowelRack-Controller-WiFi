@@ -9,15 +9,16 @@
 
 __unused static const char* TAG = "app_tasks";
 
-static const int fe_task_hold_time = 10 * 1000; // 前台任务保持时间
-static const int target_temperature_default = 50;
-static const int target_time_hours_default = 3;
-static const int target_temperature_min = 40;
-static const int target_temperature_max = 60;
-static const int target_time_hours_min = 0;
-static const int target_time_hours_max = 24;
+static const int fe_task_hold_time = 10 * 1000;   // 前台任务保持时间
+static const int target_temperature_default = 50; // 默认开机目标温度
+static const int target_time_hours_default = 3;   // 默认开机目标时间
+static const int target_temperature_min = 40;     // 目标温度范围_下限
+static const int target_temperature_max = 60;     // 目标温度范围_上限
+static const int target_time_hours_min = 0;       // 目标时间范围_下限
+static const int target_time_hours_max = 24;      // 目标时间范围_上限
 
-static QueueHandle_t bsp_input_queue; // 输入事件队列
+static QueueHandle_t bsp_input_queue = NULL;              // 输入事件队列
+static TaskHandle_t app_fe_status_watchdog_handle = NULL; // 前台状态看门狗任务句柄
 
 /* 系统状态变量 */
 static struct {
@@ -35,8 +36,6 @@ static struct {
     .target_time_hours = 0,
     .target_time_dirty = true,
 };
-
-static TaskHandle_t app_fe_status_watchdog_handle = NULL;
 
 /**
  * @brief 根据系统状态刷新显示内容
