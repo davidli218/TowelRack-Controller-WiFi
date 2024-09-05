@@ -5,8 +5,8 @@
 #include "freertos/FreeRTOS.h"
 #include "led_strip.h"
 
+#include "bsp/towelrack_controller_a1.h"
 #include "app_tasks.h"
-#include "bsp_display.h"
 #include "bsp_heating.h"
 #include "bsp_input.h"
 #include "bsp_led_strip.h"

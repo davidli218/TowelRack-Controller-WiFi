@@ -5,9 +5,11 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#include "bsp_display.h"
+#include "bsp/towelrack_controller_a1.h"
 
 __unused static const char* TAG = "bsp_display";
+
+#define BSP_DISP_MAX_CHAR (2) // 数码管最大显示字符数
 
 static struct {
     bool status;                         // 显示是否开启

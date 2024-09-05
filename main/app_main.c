@@ -2,9 +2,9 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "bsp/towelrack_controller_a1.h"
 #include "app_settings.h"
 #include "app_tasks.h"
-#include "bsp_display.h"
 #include "bsp_heating.h"
 #include "bsp_input.h"
 #include "bsp_led_strip.h"
