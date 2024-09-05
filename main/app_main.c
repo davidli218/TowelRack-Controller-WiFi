@@ -6,7 +6,6 @@
 #include "app_settings.h"
 #include "app_tasks.h"
 #include "bsp_heating.h"
-#include "bsp_input.h"
 #include "bsp_led_strip.h"
 
 __unused static const char* TAG = "app_main";

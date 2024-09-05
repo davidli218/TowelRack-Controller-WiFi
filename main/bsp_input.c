@@ -3,7 +3,7 @@
 #include "iot_button.h"
 #include "iot_knob.h"
 
-#include "bsp_input.h"
+#include "bsp/towelrack_controller_a1.h"
 
 __unused static const char* TAG = "bsp_input";
 

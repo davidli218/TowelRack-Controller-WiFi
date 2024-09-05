@@ -13,6 +13,13 @@
 #define BSP_DISP_U1_CTRL (GPIO_NUM_7)
 #define BSP_DISP_U2_CTRL (GPIO_NUM_6)
 
+/* Button & Knob */
+#define BSP_TOUCH_BUTTON_LEFT (GPIO_NUM_4)
+#define BSP_TOUCH_BUTTON_RIGHT (GPIO_NUM_5)
+#define BSP_KNOB_ENCODER_A (GPIO_NUM_2)
+#define BSP_KNOB_ENCODER_B (GPIO_NUM_3)
+#define BSP_KNOB_BUTTON (GPIO_NUM_9)
+
 /**************************************************************************************************
  *
  * 74HC595 IC & 7-Segment Display
@@ -66,3 +73,23 @@ void bsp_display_set_c_flag(bool flag);
  * @brief 设置数码管是否显示H标志, 不会立刻显示
  */
 void bsp_display_set_h_flag(bool flag);
+
+/**************************************************************************************************
+ *
+ * Button & Knob
+ *
+ * TowelRack-Controller-WiFi-A1 拥有两个触摸按键，一个旋钮和一个按钮
+ **************************************************************************************************/
+
+typedef enum {
+    BSP_KNOB_ENCODER_ACW,     // 旋钮逆时针旋转
+    BSP_KNOB_ENCODER_CW,      // 旋钮顺时针旋转
+    BSP_KNOB_LONG_PRESS,      // 旋钮长按
+    BSP_KNOB_MT8_CLICK,       // 旋钮连续点击 8 次
+    BSP_TOUCH_BUTTON_L_CLICK, // 左触摸按键点击
+    BSP_TOUCH_BUTTON_R_CLICK, // 右触摸按键点击
+} bsp_input_event_t;
+
+void bsp_input_init(void);
+
+char* bsp_input_event_to_string(bsp_input_event_t event);
