@@ -8,7 +8,6 @@
 #include "bsp/towelrack_controller_a1.h"
 #include "app_tasks.h"
 #include "bsp_heating.h"
-#include "bsp_led_strip.h"
 
 __unused static const char* TAG = "app_tasks";
 

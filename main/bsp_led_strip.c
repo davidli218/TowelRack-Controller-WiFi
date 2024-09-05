@@ -2,7 +2,7 @@
 
 #include "led_strip.h"
 
-#include "bsp_led_strip.h"
+#include "bsp/towelrack_controller_a1.h"
 
 __unused static const char* TAG = "bsp_led_strip";
 

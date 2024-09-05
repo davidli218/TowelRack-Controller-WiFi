@@ -20,6 +20,10 @@
 #define BSP_KNOB_ENCODER_B (GPIO_NUM_3)
 #define BSP_KNOB_BUTTON (GPIO_NUM_9)
 
+/* SK6812 LED Strip */
+#define BSP_LED_STRIP_GPIO (GPIO_NUM_8)
+
+
 /**************************************************************************************************
  *
  * 74HC595 IC & 7-Segment Display
@@ -74,6 +78,7 @@ void bsp_display_set_c_flag(bool flag);
  */
 void bsp_display_set_h_flag(bool flag);
 
+
 /**************************************************************************************************
  *
  * Button & Knob
@@ -93,3 +98,26 @@ typedef enum {
 void bsp_input_init(void);
 
 char* bsp_input_event_to_string(bsp_input_event_t event);
+
+
+/**************************************************************************************************
+ *
+ * SK6812 LED Strip
+ *
+ * TowelRack-Controller-WiFi-A1 使用SK6812 RGBW LED灯带
+ **************************************************************************************************/
+
+#define BSP_LED_STRIP_NUM (4)
+#define BSP_LED_STRIP_RMT_RES_HZ (10 * 1000 * 1000)
+
+typedef enum {
+    BSP_STRIP_OFF = 0,
+    BSP_STRIP_ORANGE,
+    BSP_STRIP_GREEN,
+    BSP_STRIP_BLUE,
+    BSP_STRIP_RED,
+} bsp_led_strip_mode_t;
+
+void bsp_led_strip_init(void);
+
+void bsp_led_strip_write(bsp_led_strip_mode_t mode);
