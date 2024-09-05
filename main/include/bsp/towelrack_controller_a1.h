@@ -23,6 +23,13 @@
 /* SK6812 LED Strip */
 #define BSP_LED_STRIP_GPIO (GPIO_NUM_8)
 
+/* NTC Temperature Sensor */
+#define BSP_NTC_ADC_CHANNEL (ADC_CHANNEL_0)
+#define BSP_NTC_ADC_UNIT (ADC_UNIT_1)
+
+/* Heating Control */
+#define BSP_HEATING_CTRL_PORT (GPIO_NUM_1)
+
 
 /**************************************************************************************************
  *
@@ -121,3 +128,21 @@ typedef enum {
 void bsp_led_strip_init(void);
 
 void bsp_led_strip_write(bsp_led_strip_mode_t mode);
+
+
+/**************************************************************************************************
+ *
+ * NTC Temperature Sensor + Heating Control
+ *
+ * TowelRack-Controller-WiFi-A1 使用NTC热敏电阻传感器测量温度, 并使用可控硅控制加热
+ **************************************************************************************************/
+
+void bsp_heating_init(void);
+
+void bsp_heating_deinit(void);
+
+int bsp_heating_get_temp(void);
+
+void bsp_heating_enable(void);
+
+void bsp_heating_disable(void);
