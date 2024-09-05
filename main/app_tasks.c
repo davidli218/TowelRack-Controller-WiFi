@@ -334,29 +334,29 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
  * @brief [RT任务]定时开关机任务
  */
 _Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
-    int rest_min = 0;
+    int rest_3sec_counter = 0; // 3秒计数器
     while (1) {
         if (app_context.target_time_hours == 0) {
-            vTaskDelay(pdMS_TO_TICKS(5000)); // 5秒检查一次
+            vTaskDelay(pdMS_TO_TICKS(3000)); // 3秒检查一次
             continue;
         }
 
         if (app_context.target_time_dirty) {
-            rest_min = app_context.target_time_hours * 60;
+            rest_3sec_counter = app_context.target_time_hours * 20 * 60; // 20次/分钟
             app_context.target_time_dirty = false;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(60000)); // 1分钟检查一次
-        rest_min--;
+        vTaskDelay(pdMS_TO_TICKS(3000)); // 3秒检查一次
+        rest_3sec_counter--;
 
         if (app_context.target_time_dirty) { continue; }
 
-        if (rest_min == 0) {
+        if (rest_3sec_counter <= 0) {
             app_be_toggle_status();
             continue;
         }
 
-        app_context.target_time_hours = ceil((float)rest_min / 60);
+        app_context.target_time_hours = ceil((float)rest_3sec_counter / 20 / 60);
     }
 }
 
