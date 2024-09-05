@@ -305,7 +305,9 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
                 bsp_heating_enable();
                 if (current_temperature >= app_context.target_temperature) {
                     app_context.idle_strip_mode = BSP_STRIP_GREEN;
-                    bsp_led_strip_write(app_context.idle_strip_mode);
+                    if (app_context.fe_status == APP_FE_STATUS_IDLE) {
+                        bsp_led_strip_write(app_context.idle_strip_mode);
+                    }
                     heating_status = 1;
                 }
                 break;
@@ -313,7 +315,9 @@ _Noreturn void heating_task(__attribute__((unused)) void* pvParameters) {
                 bsp_heating_disable();
                 if (current_temperature < app_context.target_temperature - 5) {
                     app_context.idle_strip_mode = BSP_STRIP_ORANGE;
-                    bsp_led_strip_write(app_context.idle_strip_mode);
+                    if (app_context.fe_status == APP_FE_STATUS_IDLE) {
+                        bsp_led_strip_write(app_context.idle_strip_mode);
+                    }
                     heating_status = 0;
                 }
                 break;
