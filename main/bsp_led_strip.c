@@ -4,7 +4,7 @@
 
 #include "bsp/towelrack_controller_a1.h"
 
-__unused static const char* TAG = "bsp_led_strip";
+__unused static const char* TAG = BSP_LOG_TAG("led_strip");
 
 static led_strip_handle_t led_strip = NULL;
 

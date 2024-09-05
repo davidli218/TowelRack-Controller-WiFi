@@ -7,7 +7,7 @@
 
 #include "bsp/towelrack_controller_a1.h"
 
-__unused static const char* TAG = "bsp_display";
+__unused static const char* TAG = BSP_LOG_TAG("display");
 
 #define BSP_DISP_MAX_CHAR (2) // 数码管最大显示字符数
 

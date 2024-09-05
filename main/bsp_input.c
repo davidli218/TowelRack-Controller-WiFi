@@ -5,7 +5,7 @@
 
 #include "bsp/towelrack_controller_a1.h"
 
-__unused static const char* TAG = "bsp_input";
+__unused static const char* TAG = BSP_LOG_TAG("input");
 
 QueueHandle_t bsp_input_queue = NULL;
 

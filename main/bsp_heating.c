@@ -3,7 +3,7 @@
 
 #include "bsp/towelrack_controller_a1.h"
 
-__unused static const char* TAG = "bsp_heating";
+__unused static const char* TAG = BSP_LOG_TAG("heating");
 
 static ntc_device_handle_t ntc = NULL;
 
