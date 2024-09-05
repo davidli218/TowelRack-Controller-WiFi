@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -336,7 +337,7 @@ _Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
         }
 
         if (app_context.target_time_dirty) {
-            rest_min = app_context.target_time_hours;
+            rest_min = app_context.target_time_hours * 60;
             app_context.target_time_dirty = false;
         }
 
@@ -350,7 +351,7 @@ _Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
             continue;
         }
 
-        app_context.target_time_hours = rest_min;
+        app_context.target_time_hours = ceil((float)rest_min / 60);
     }
 }
 
