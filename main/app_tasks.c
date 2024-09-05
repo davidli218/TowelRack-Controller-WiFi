@@ -13,7 +13,7 @@
 
 __unused static const char* TAG = "app_tasks";
 
-const int fe_task_hold_time = 5000; // 前台任务保持时间
+const int fe_task_hold_time = 10 * 1000; // 前台任务保持时间
 const int target_temperature_default = 50;
 const int target_time_hours_default = 3;
 const int target_temperature_min = 40;
