@@ -20,6 +20,12 @@ static const int target_time_hours_max = 24;      // 目标时间范围_上限
 static QueueHandle_t bsp_input_queue = NULL;              // 输入事件队列
 static TaskHandle_t app_fe_status_watchdog_handle = NULL; // 前台状态看门狗任务句柄
 
+typedef enum {
+    APP_FE_STATUS_IDLE,
+    APP_FE_STATUS_TEMP_INTERACT,
+    APP_FE_STATUS_TIMER_INTERACT,
+} app_frontend_status_t;
+
 /* 系统状态变量 */
 static struct {
     bool be_status_on;                    // 后台状态
