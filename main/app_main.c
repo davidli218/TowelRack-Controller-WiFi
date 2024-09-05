@@ -2,9 +2,9 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include "bsp/towelrack_controller_a1.h"
 #include "app_settings.h"
 #include "app_tasks.h"
+#include "bsp/towelrack_controller_a1.h"
 
 __unused static const char* TAG = "app_main";
 
@@ -25,9 +25,6 @@ static void system_init(void) {
 void app_main(void) {
     system_init(); // 初始化系统
 
-    bsp_led_strip_init(); // 初始化LED灯带
-    bsp_heating_init();   // 初始化加热系统
-    bsp_display_init();   // 初始化数码管
-    bsp_input_init();     // 初始化输入设备
-    app_tasks_init();     // 初始化应用任务
+    bsp_init_all();   // 初始化硬件外设
+    app_tasks_init(); // 初始化应用任务
 }

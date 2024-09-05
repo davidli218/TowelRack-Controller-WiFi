@@ -1,7 +1,7 @@
 idf_component_register(
         SRCS
         "app_main.c" "app_settings.c" "app_tasks.c"
-        "bsp_display.c" "bsp_input.c" "bsp_led_strip.c" "bsp_heating.c"
+        "bsp_seg_display_driver.c" "bsp_towelrack_controller_a1.c"
         INCLUDE_DIRS
         "include"
 )

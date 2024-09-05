@@ -1,24 +1,23 @@
-#include <stdlib.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "led_strip.h"
 
-#include "bsp/towelrack_controller_a1.h"
 #include "app_tasks.h"
+#include "bsp/towelrack_controller_a1.h"
 
 __unused static const char* TAG = "app_tasks";
 
-const int fe_task_hold_time = 10 * 1000; // 前台任务保持时间
-const int target_temperature_default = 50;
-const int target_time_hours_default = 3;
-const int target_temperature_min = 40;
-const int target_temperature_max = 60;
-const int target_time_hours_min = 0;
-const int target_time_hours_max = 24;
+static const int fe_task_hold_time = 10 * 1000; // 前台任务保持时间
+static const int target_temperature_default = 50;
+static const int target_time_hours_default = 3;
+static const int target_temperature_min = 40;
+static const int target_temperature_max = 60;
+static const int target_time_hours_min = 0;
+static const int target_time_hours_max = 24;
 
-extern QueueHandle_t bsp_input_queue; // 输入事件队列
+static QueueHandle_t bsp_input_queue; // 输入事件队列
 
 /* 系统状态变量 */
 static struct {
@@ -360,7 +359,8 @@ _Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
  * @brief 初始化系统任务
  */
 void app_tasks_init(void) {
-    assert(bsp_input_queue != NULL); // 输入事件队列必须先初始化
+    bsp_input_queue = bsp_input_get_queue();
+    assert(bsp_input_queue != NULL); // 输入事件队列必须存在
 
     xTaskCreate(
         // 创建前台状态看门狗任务
