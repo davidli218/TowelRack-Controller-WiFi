@@ -207,7 +207,7 @@ void bsp_led_strip_write(const bsp_led_strip_mode_t mode) {
             break;
         case BSP_STRIP_GREEN:
             for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 0, 255, 0));
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 76, 255, 10));
             }
             break;
         case BSP_STRIP_BLUE:
