@@ -205,6 +205,17 @@ void display_set_h_flag(const display_device_handle_t handle, const bool flag) {
     dev->h_flag = flag;
 }
 
+void display_enable_all(const display_device_handle_t handle) {
+    display_driver_dev_t* dev = handle;
+
+    if (dev->status) display_pause(dev);
+
+    display_74hc595_send_byte(dev, 0xFF);
+    display_74hc595_toggle_output(dev);
+    display_enable_u1(dev);
+    display_enable_u2(dev);
+}
+
 void display_init(const display_config_t* config, display_device_handle_t* handle) {
     *handle = NULL;
 

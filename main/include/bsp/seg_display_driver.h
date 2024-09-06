@@ -24,4 +24,6 @@ void display_set_c_flag(display_device_handle_t handle, bool flag);
 
 void display_set_h_flag(display_device_handle_t handle, bool flag);
 
+void display_enable_all(display_device_handle_t handle);
+
 void display_init(const display_config_t* config, display_device_handle_t* handle);
