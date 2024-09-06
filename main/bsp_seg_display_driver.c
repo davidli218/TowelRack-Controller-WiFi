@@ -124,9 +124,8 @@ static void display_clear_all(display_driver_dev_t* dev) {
 }
 
 static void display_pause(display_driver_dev_t* dev) {
-    if (!dev->status) return;
+    if (dev->status) { ESP_ERROR_CHECK(gptimer_stop(dev->gptimer)); }
 
-    ESP_ERROR_CHECK(gptimer_stop(dev->gptimer));
     display_disable_output(dev);
     display_clear_all(dev);
 
