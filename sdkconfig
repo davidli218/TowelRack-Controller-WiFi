@@ -447,10 +447,28 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Example Configuration
+# HW Version Selection
+#
+CONFIG_TRC_WIFI_A_VERSION_1=y
+# CONFIG_TRC_WIFI_A_VERSION_2 is not set
+# end of HW Version Selection
+
+#
+# HW GPIO Configuration
+#
+CONFIG_BSP_P_DISP_S2_SW=6
+CONFIG_BSP_P_TOUCH_BUTTON_L=4
+CONFIG_BSP_P_TOUCH_BUTTON_R=5
+CONFIG_BSP_P_KNOB_ENCODER_A=2
+CONFIG_BSP_P_KNOB_ENCODER_B=3
+CONFIG_BSP_P_HEATING_CTRL=6
+# end of HW GPIO Configuration
+
+#
+# Network Configuration
 #
 # CONFIG_SET_MAC_ADDRESS_OF_TARGET_AP is not set
-# end of Example Configuration
+# end of Network Configuration
 
 #
 # Compiler options

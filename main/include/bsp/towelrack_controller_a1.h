@@ -13,13 +13,13 @@
 #define BSP_P_74HC595_SHCP (GPIO_NUM_18)
 #define BSP_P_74HC595_STCP (GPIO_NUM_19)
 #define BSP_P_DISP_S1_SW (GPIO_NUM_7)
-#define BSP_P_DISP_S2_SW (GPIO_NUM_6)
+#define BSP_P_DISP_S2_SW CONFIG_BSP_P_DISP_S2_SW
 
 /* Button & Knob */
-#define BSP_P_TOUCH_BUTTON_L (GPIO_NUM_4)
-#define BSP_P_TOUCH_BUTTON_R (GPIO_NUM_5)
-#define BSP_P_KNOB_ENCODER_A (GPIO_NUM_2)
-#define BSP_P_KNOB_ENCODER_B (GPIO_NUM_3)
+#define BSP_P_TOUCH_BUTTON_L CONFIG_BSP_P_TOUCH_BUTTON_L
+#define BSP_P_TOUCH_BUTTON_R CONFIG_BSP_P_TOUCH_BUTTON_R
+#define BSP_P_KNOB_ENCODER_A CONFIG_BSP_P_KNOB_ENCODER_A
+#define BSP_P_KNOB_ENCODER_B CONFIG_BSP_P_KNOB_ENCODER_B
 #define BSP_P_KNOB_BUTTON (GPIO_NUM_9)
 
 /* SK6812 LED Strip */
@@ -28,7 +28,7 @@
 /* NTC Temperature Sensor & Heating Control */
 #define BSP_P_NTC_ADC_CHANNEL (ADC_CHANNEL_0)
 #define BSP_P_NTC_ADC_UNIT (ADC_UNIT_1)
-#define BSP_P_HEATING_CTRL (GPIO_NUM_1)
+#define BSP_P_HEATING_CTRL CONFIG_BSP_P_HEATING_CTRL
 
 
 /**************************************************************************************************
