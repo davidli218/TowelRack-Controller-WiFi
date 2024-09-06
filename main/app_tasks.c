@@ -9,7 +9,7 @@
 
 __unused static const char* TAG = "app_tasks";
 
-static const int fe_task_hold_time = 10 * 1000;   // 前台任务保持时间
+static const int fe_task_hold_time = 2 * 1000;    // 前台任务保持时间
 static const int target_temperature_default = 50; // 默认开机目标温度
 static const int target_time_hours_default = 3;   // 默认开机目标时间
 static const int target_temperature_min = 40;     // 目标温度范围_下限
