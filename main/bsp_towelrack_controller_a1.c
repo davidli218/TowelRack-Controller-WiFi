@@ -187,36 +187,53 @@ char* bsp_input_event_to_string(const bsp_input_event_t event) {
  **************************************************************************************************/
 
 static led_strip_handle_t led_strip = NULL;
+static int led_strip_brightness = 50;
 
 void bsp_led_strip_init(void) { ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip)); }
 
 void bsp_led_strip_write(const bsp_led_strip_mode_t mode) {
+    int red, green, blue;
+
+    if (mode == BSP_STRIP_OFF) {
+        ESP_ERROR_CHECK(led_strip_clear(led_strip));
+        return;
+    }
+
     switch (mode) {
-        case BSP_STRIP_OFF:
-            ESP_ERROR_CHECK(led_strip_clear(led_strip));
+        case BSP_STRIP_WHITE:
+            red = 255 * led_strip_brightness / 100;
+            green = 255 * led_strip_brightness / 100;
+            blue = 255 * led_strip_brightness / 100;
             break;
         case BSP_STRIP_ORANGE:
-            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 255, 76, 10));
-            }
+            red = 255 * led_strip_brightness / 100;
+            green = 76 * led_strip_brightness / 100;
+            blue = 10 * led_strip_brightness / 100;
             break;
         case BSP_STRIP_RED:
-            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 255, 0, 0));
-            }
+            red = 255 * led_strip_brightness / 100;
+            green = 0;
+            blue = 0;
             break;
         case BSP_STRIP_GREEN:
-            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 76, 255, 10));
-            }
+            red = 76 * led_strip_brightness / 100;
+            green = 255 * led_strip_brightness / 100;
+            blue = 10 * led_strip_brightness / 100;
             break;
         case BSP_STRIP_BLUE:
-            for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 0, 0, 255));
-            }
+            red = 0;
+            green = 0;
+            blue = 255 * led_strip_brightness / 100;
             break;
         default:
+            red = 0;
+            green = 0;
+            blue = 0;
             break;
+    }
+
+    for (int i = 0; i < BSP_LED_STRIP_NUM; i++) {
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, red, green, blue));
     }
 
     ESP_ERROR_CHECK(led_strip_refresh(led_strip));

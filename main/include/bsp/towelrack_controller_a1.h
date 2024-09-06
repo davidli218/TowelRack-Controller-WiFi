@@ -100,6 +100,7 @@ char* bsp_input_event_to_string(bsp_input_event_t event);
 
 typedef enum {
     BSP_STRIP_OFF = 0,
+    BSP_STRIP_WHITE,
     BSP_STRIP_ORANGE,
     BSP_STRIP_GREEN,
     BSP_STRIP_BLUE,
