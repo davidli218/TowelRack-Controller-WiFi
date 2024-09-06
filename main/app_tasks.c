@@ -87,7 +87,7 @@ static void app_fe_switch_status(const app_frontend_status_t status) {
             bsp_led_strip_write(app_context.idle_strip_mode);
             break;
         case APP_FE_STATUS_TEMP_INTERACT:
-            bsp_led_strip_write(BSP_STRIP_RED);
+            bsp_led_strip_write(BSP_STRIP_ORANGE);
             break;
         case APP_FE_STATUS_TIMER_INTERACT:
             bsp_led_strip_write(BSP_STRIP_BLUE);
