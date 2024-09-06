@@ -13,11 +13,11 @@ static const char* TAG = "towelrack-controller-a1";
  **************************************************************************************************/
 
 const display_config_t bsp_display_config = {
-    .ds = BSP_DISP_IC_DS,
-    .shcp = BSP_DISP_IC_SHCP,
-    .stcp = BSP_DISP_IC_STCP,
-    .u1_ctrl = BSP_DISP_U1_CTRL,
-    .u2_ctrl = BSP_DISP_U2_CTRL,
+    .ds = BSP_P_74HC595_DS,
+    .shcp = BSP_P_74HC595_SHCP,
+    .stcp = BSP_P_74HC595_STCP,
+    .u1_ctrl = BSP_P_DISP_S1_SW,
+    .u2_ctrl = BSP_P_DISP_S2_SW,
     .max_lens = 2,
 };
 
@@ -30,7 +30,7 @@ static const button_config_t config_touch_button_left = {
     .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
     .gpio_button_config =
     {
-        .gpio_num = BSP_TOUCH_BUTTON_LEFT,
+        .gpio_num = BSP_P_TOUCH_BUTTON_L,
         .active_level = 1,
     },
 };
@@ -40,15 +40,15 @@ static const button_config_t config_touch_button_right = {
     .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
     .gpio_button_config =
     {
-        .gpio_num = BSP_TOUCH_BUTTON_RIGHT,
+        .gpio_num = BSP_P_TOUCH_BUTTON_R,
         .active_level = 1,
     },
 };
 
 static const knob_config_t config_knob_encoder_a_b = {
     .default_direction = 0,
-    .gpio_encoder_a = BSP_KNOB_ENCODER_A,
-    .gpio_encoder_b = BSP_KNOB_ENCODER_B,
+    .gpio_encoder_a = BSP_P_KNOB_ENCODER_A,
+    .gpio_encoder_b = BSP_P_KNOB_ENCODER_B,
 };
 
 static const button_config_t config_knob_btn = {
@@ -57,7 +57,7 @@ static const button_config_t config_knob_btn = {
     .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
     .gpio_button_config =
     {
-        .gpio_num = BSP_KNOB_BUTTON,
+        .gpio_num = BSP_P_KNOB_BUTTON,
         .active_level = 0,
     },
 };
@@ -69,7 +69,7 @@ static const button_config_t config_knob_btn = {
 #define BSP_LED_STRIP_NUM 4
 
 const led_strip_config_t strip_config = {
-    .strip_gpio_num = BSP_LED_STRIP_GPIO,
+    .strip_gpio_num = BSP_P_LED_STRIP,
     .max_leds = BSP_LED_STRIP_NUM,
     .led_pixel_format = LED_PIXEL_FORMAT_GRB,
     .led_model = LED_MODEL_SK6812,
@@ -93,14 +93,14 @@ static ntc_config_t ntc_config = {
     .vdd_mv = 3300,
     .circuit_mode = CIRCUIT_MODE_NTC_GND,
     .atten = ADC_ATTEN_DB_12,
-    .channel = BSP_NTC_ADC_CHANNEL,
-    .unit = BSP_NTC_ADC_UNIT,
+    .channel = BSP_P_NTC_ADC_CHANNEL,
+    .unit = BSP_P_NTC_ADC_UNIT,
 };
 
 static gpio_config_t heating_ctrl_config = {
     .intr_type = GPIO_INTR_DISABLE,
     .mode = GPIO_MODE_OUTPUT,
-    .pin_bit_mask = (1ULL << BSP_HEATING_CTRL_PORT),
+    .pin_bit_mask = (1ULL << BSP_P_HEATING_CTRL),
     .pull_down_en = GPIO_PULLDOWN_DISABLE,
     .pull_up_en = GPIO_PULLUP_DISABLE,
 };
@@ -254,7 +254,7 @@ void bsp_heating_init(void) {
 
     /* 初始化加热器控制 */
     gpio_config(&heating_ctrl_config);
-    gpio_set_level(BSP_HEATING_CTRL_PORT, 0);
+    gpio_set_level(BSP_P_HEATING_CTRL, 0);
 }
 
 int bsp_heating_get_temp(void) {
@@ -268,9 +268,9 @@ int bsp_heating_get_temp(void) {
     return 100;
 }
 
-void bsp_heating_enable(void) { gpio_set_level(BSP_HEATING_CTRL_PORT, 1); }
+void bsp_heating_enable(void) { gpio_set_level(BSP_P_HEATING_CTRL, 1); }
 
-void bsp_heating_disable(void) { gpio_set_level(BSP_HEATING_CTRL_PORT, 0); }
+void bsp_heating_disable(void) { gpio_set_level(BSP_P_HEATING_CTRL, 0); }
 
 
 /**************************************************************************************************

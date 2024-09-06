@@ -9,26 +9,26 @@
  **************************************************************************************************/
 
 /* 74HC595 IC & 7-Segment Display */
-#define BSP_DISP_IC_DS (GPIO_NUM_10)
-#define BSP_DISP_IC_SHCP (GPIO_NUM_18)
-#define BSP_DISP_IC_STCP (GPIO_NUM_19)
-#define BSP_DISP_U1_CTRL (GPIO_NUM_7)
-#define BSP_DISP_U2_CTRL (GPIO_NUM_6)
+#define BSP_P_74HC595_DS (GPIO_NUM_10)
+#define BSP_P_74HC595_SHCP (GPIO_NUM_18)
+#define BSP_P_74HC595_STCP (GPIO_NUM_19)
+#define BSP_P_DISP_S1_SW (GPIO_NUM_7)
+#define BSP_P_DISP_S2_SW (GPIO_NUM_6)
 
 /* Button & Knob */
-#define BSP_TOUCH_BUTTON_LEFT (GPIO_NUM_4)
-#define BSP_TOUCH_BUTTON_RIGHT (GPIO_NUM_5)
-#define BSP_KNOB_ENCODER_A (GPIO_NUM_2)
-#define BSP_KNOB_ENCODER_B (GPIO_NUM_3)
-#define BSP_KNOB_BUTTON (GPIO_NUM_9)
+#define BSP_P_TOUCH_BUTTON_L (GPIO_NUM_4)
+#define BSP_P_TOUCH_BUTTON_R (GPIO_NUM_5)
+#define BSP_P_KNOB_ENCODER_A (GPIO_NUM_2)
+#define BSP_P_KNOB_ENCODER_B (GPIO_NUM_3)
+#define BSP_P_KNOB_BUTTON (GPIO_NUM_9)
 
 /* SK6812 LED Strip */
-#define BSP_LED_STRIP_GPIO (GPIO_NUM_8)
+#define BSP_P_LED_STRIP (GPIO_NUM_8)
 
 /* NTC Temperature Sensor & Heating Control */
-#define BSP_NTC_ADC_CHANNEL (ADC_CHANNEL_0)
-#define BSP_NTC_ADC_UNIT (ADC_UNIT_1)
-#define BSP_HEATING_CTRL_PORT (GPIO_NUM_1)
+#define BSP_P_NTC_ADC_CHANNEL (ADC_CHANNEL_0)
+#define BSP_P_NTC_ADC_UNIT (ADC_UNIT_1)
+#define BSP_P_HEATING_CTRL (GPIO_NUM_1)
 
 
 /**************************************************************************************************
