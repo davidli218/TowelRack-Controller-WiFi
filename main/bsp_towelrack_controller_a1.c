@@ -216,20 +216,15 @@ void bsp_led_strip_write(const bsp_led_strip_mode_t mode) {
             green = 76 * led_strip_brightness / 100;
             blue = 10 * led_strip_brightness / 100;
             break;
-        case BSP_STRIP_RED:
-            red = 255 * led_strip_brightness / 100;
-            green = 0;
-            blue = 0;
-            break;
         case BSP_STRIP_GREEN:
-            red = 76 * led_strip_brightness / 100;
-            green = 255 * led_strip_brightness / 100;
-            blue = 10 * led_strip_brightness / 100;
+            red = 96 * led_strip_brightness / 100;
+            green = 230 * led_strip_brightness / 100;
+            blue = 30 * led_strip_brightness / 100;
             break;
         case BSP_STRIP_BLUE:
-            red = 0;
-            green = 0;
-            blue = 255 * led_strip_brightness / 100;
+            red = 30 * led_strip_brightness / 100;
+            green = 96 * led_strip_brightness / 100;
+            blue = 230 * led_strip_brightness / 100;
             break;
         default:
             red = 0;
