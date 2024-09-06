@@ -357,6 +357,7 @@ _Noreturn void power_on_off_task(__attribute__((unused)) void* pvParameters) {
         }
 
         app_context.target_time_hours = ceil((float)rest_3sec_counter / 20 / 60);
+        if (app_context.fe_status == APP_FE_STATUS_TIMER_INTERACT) { app_refresh_display(); }
     }
 }
 
