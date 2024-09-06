@@ -111,7 +111,10 @@ static gpio_config_t heating_ctrl_config = {
 
 static display_device_handle_t display_device = NULL;
 
-void bsp_display_init(void) { display_init(&bsp_display_config, &display_device); }
+void bsp_display_init(void) {
+    display_init(&bsp_display_config, &display_device);
+    display_enable_all(display_device);
+}
 
 void bsp_display_write_str(const char* str) { display_write_str(display_device, str); }
 
@@ -189,7 +192,10 @@ char* bsp_input_event_to_string(const bsp_input_event_t event) {
 static led_strip_handle_t led_strip = NULL;
 static int led_strip_brightness = 50;
 
-void bsp_led_strip_init(void) { ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip)); }
+void bsp_led_strip_init(void) {
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+    bsp_led_strip_write(BSP_STRIP_WHITE);
+}
 
 void bsp_led_strip_write(const bsp_led_strip_mode_t mode) {
     int red, green, blue;
@@ -280,4 +286,8 @@ void bsp_init_all(void) {
     bsp_led_strip_init();
     bsp_heating_init();
     bsp_input_init();
+
+    vTaskDelay(pdMS_TO_TICKS(2000));         // 等待2s (自检)
+    display_write_str(display_device, NULL); // 熄灭数码管
+    bsp_led_strip_write(BSP_STRIP_OFF);      // 熄灭LED灯带
 }
