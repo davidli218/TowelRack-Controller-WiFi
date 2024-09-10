@@ -2,48 +2,13 @@ menu "HW Version Selection"
 
     choice
         prompt "Select TRC_WIFI_A Hardware Version"
-        default TRC_WIFI_A_VERSION_1
+        default HW_VERSION_A_1
 
-        config TRC_WIFI_A_VERSION_1
+        config HW_VERSION_A_1
             bool "TowelRack-Controller-WiFi-A1"
-
-        config TRC_WIFI_A_VERSION_2
+        config HW_VERSION_A_2
             bool "TowelRack-Controller-WiFi-A2"
     endchoice
-
-endmenu
-
-menu "HW GPIO Configuration"
-
-    config BSP_P_DISP_S2_SW
-    int "Display Segment 2 Switch Pin"
-    default 6 if TRC_WIFI_A_VERSION_1
-    default 1 if TRC_WIFI_A_VERSION_2
-
-    config BSP_P_TOUCH_BUTTON_L
-    int "Touch Button Left Pin"
-    default 4 if TRC_WIFI_A_VERSION_1
-    default 3 if TRC_WIFI_A_VERSION_2
-
-    config BSP_P_TOUCH_BUTTON_R
-    int "Touch Button Right Pin"
-    default 5 if TRC_WIFI_A_VERSION_1
-    default 2 if TRC_WIFI_A_VERSION_2
-
-    config BSP_P_KNOB_ENCODER_A
-    int "Knob Encoder A Pin"
-    default 2 if TRC_WIFI_A_VERSION_1
-    default 5 if TRC_WIFI_A_VERSION_2
-
-    config BSP_P_KNOB_ENCODER_B
-    int "Knob Encoder B Pin"
-    default 3 if TRC_WIFI_A_VERSION_1
-    default 4 if TRC_WIFI_A_VERSION_2
-
-    config BSP_P_HEATING_CTRL
-    int "Heating Control Pin"
-    default 1 if TRC_WIFI_A_VERSION_1
-    default 6 if TRC_WIFI_A_VERSION_2
 
 endmenu
 
