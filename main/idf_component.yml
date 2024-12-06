@@ -1,9 +1,9 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/knob: "^0.1.5"
-  espressif/button: "^3.2.3"
-  espressif/ntc_driver: "^0.3.0"
-  espressif/led_strip: "^2.5.5"
+  espressif/knob: "^1.0.0"
+  espressif/button: "^3.4.0"
+  espressif/ntc_driver: "^1.1.0"
+  espressif/led_strip: "^3.0.0"
   ## Required IDF version
   idf:
     version: ">=4.1.0"

@@ -71,8 +71,8 @@ static const button_config_t config_knob_btn = {
 const led_strip_config_t strip_config = {
     .strip_gpio_num = BSP_P_LED_STRIP,
     .max_leds = BSP_LED_STRIP_NUM,
-    .led_pixel_format = LED_PIXEL_FORMAT_GRB,
     .led_model = LED_MODEL_SK6812,
+    .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB,
     .flags.invert_out = false,
 };
 
