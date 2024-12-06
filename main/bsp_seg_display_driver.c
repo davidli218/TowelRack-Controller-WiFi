@@ -5,16 +5,14 @@
 #include "driver/gptimer.h"
 #include "freertos/FreeRTOS.h"
 
+#include "ic_74hc595_driver.h"
+
 #include "bsp/seg_display_driver.h"
 
 typedef struct {
-    struct pinout {
-        gpio_num_t ds;
-        gpio_num_t shcp;
-        gpio_num_t stcp;
-        gpio_num_t u1_ctrl;
-        gpio_num_t u2_ctrl;
-    } pinout;
+    ic_74hc595_handle_t ic_74_hc595_handle;
+    gpio_num_t u1_ctrl;
+    gpio_num_t u2_ctrl;
 
     uint8_t max_lens; // 数码管最大显示字符数
 
@@ -56,42 +54,22 @@ static uint8_t display_get_segment_pattern(const char character) {
  * @brief 关闭所有数码管显示
  */
 static void display_disable_output(const display_driver_dev_t* dev) {
-    gpio_set_level(dev->pinout.u1_ctrl, 1);
-    gpio_set_level(dev->pinout.u2_ctrl, 1);
+    gpio_set_level(dev->u1_ctrl, 1);
+    gpio_set_level(dev->u2_ctrl, 1);
 }
 
 /**
  * @brief 打开1号数码管显示
  */
 static void display_enable_u1(const display_driver_dev_t* dev) {
-    gpio_set_level(dev->pinout.u1_ctrl, 0);
+    gpio_set_level(dev->u1_ctrl, 0);
 }
 
 /**
  * @brief 打开2号数码管
  */
 static void display_enable_u2(const display_driver_dev_t* dev) {
-    gpio_set_level(dev->pinout.u2_ctrl, 0);
-}
-
-/**
- * @brief 向74HC595发送一个字节
- */
-static void display_74hc595_send_byte(const display_driver_dev_t* dev, uint8_t data) {
-    for (int i = 0; i < 8; i++) {
-        gpio_set_level(dev->pinout.ds, data & 0x80);
-        gpio_set_level(dev->pinout.shcp, 0);
-        gpio_set_level(dev->pinout.shcp, 1);
-        data <<= 1;
-    }
-}
-
-/**
- * @brief 刷新74HC595输出
- */
-static void display_74hc595_toggle_output(const display_driver_dev_t* dev) {
-    gpio_set_level(dev->pinout.stcp, 0);
-    gpio_set_level(dev->pinout.stcp, 1);
+    gpio_set_level(dev->u2_ctrl, 0);
 }
 
 /**
@@ -119,8 +97,7 @@ static void display_clear_all(display_driver_dev_t* dev) {
     memset(dev->buffer, 0, sizeof(uint8_t) * dev->max_lens);
 
     /* 2. 清空74HC595 */
-    display_74hc595_send_byte(dev, 0x00);
-    display_74hc595_toggle_output(dev);
+    ic_74hc595_reset(dev->ic_74_hc595_handle);
 }
 
 static void display_pause(display_driver_dev_t* dev) {
@@ -153,9 +130,9 @@ static bool IRAM_ATTR display_refresh_timer_cb(
 
     if (current_digit >= dev->max_lens) { current_digit = 0; }
 
-    display_74hc595_send_byte(dev, dev->buffer[current_digit]);
+    ic_74hc595_write(dev->ic_74_hc595_handle, dev->buffer[current_digit]);
     display_disable_output(dev);
-    display_74hc595_toggle_output(dev);
+    ic_74hc595_latch(dev->ic_74_hc595_handle);
     current_digit == 0 ? display_enable_u1(dev) : display_enable_u2(dev);
 
     current_digit++;
@@ -209,8 +186,8 @@ void display_enable_all(const display_device_handle_t handle) {
 
     if (dev->status) display_pause(dev);
 
-    display_74hc595_send_byte(dev, 0xFF);
-    display_74hc595_toggle_output(dev);
+    ic_74hc595_write(dev->ic_74_hc595_handle, 0xFF);
+    ic_74hc595_latch(dev->ic_74_hc595_handle);
     display_enable_u1(dev);
     display_enable_u2(dev);
 }
@@ -223,11 +200,17 @@ void display_init(const display_config_t* config, display_device_handle_t* handl
     display_driver_dev_t* dev = malloc(sizeof(display_driver_dev_t));
     if (dev == NULL) return;
 
-    dev->pinout.ds = config->ds;
-    dev->pinout.shcp = config->shcp;
-    dev->pinout.stcp = config->stcp;
-    dev->pinout.u1_ctrl = config->u1_ctrl;
-    dev->pinout.u2_ctrl = config->u2_ctrl;
+    const ic_74hc595_config_t ic_config = {
+        .ds = config->ds,
+        .shcp = config->shcp,
+        .stcp = config->stcp,
+        .oe_ = GPIO_NUM_NC,
+        .mr_ = GPIO_NUM_NC,
+    };
+    ESP_ERROR_CHECK(ic_74hc595_init(&ic_config, &dev->ic_74_hc595_handle));
+
+    dev->u1_ctrl = config->u1_ctrl;
+    dev->u2_ctrl = config->u2_ctrl;
     dev->max_lens = config->max_lens;
     dev->content = malloc(sizeof(char) * (config->max_lens + 1));
     dev->buffer = malloc(sizeof(uint8_t) * config->max_lens);
@@ -237,10 +220,9 @@ void display_init(const display_config_t* config, display_device_handle_t* handl
     const gpio_config_t io_config = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << dev->pinout.ds | 1ULL << dev->pinout.shcp | 1ULL << dev->pinout.stcp |
-                        1ULL << dev->pinout.u1_ctrl | 1ULL << dev->pinout.u2_ctrl,
-        .pull_down_en = 0,
-        .pull_up_en = 0,
+        .pin_bit_mask = 1ULL << dev->u1_ctrl | 1ULL << dev->u2_ctrl,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
     };
     gpio_config(&io_config);
 

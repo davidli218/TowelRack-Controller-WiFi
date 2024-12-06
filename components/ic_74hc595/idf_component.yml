@@ -1,0 +1,8 @@
+version: "0.1.0"
+description: Driver for 74HC595 shift register
+url: https://github.com/davidli218/esp-idf-74hc595/tree/master/
+issues: https://github.com/davidli218/esp-idf-74hc595/issues
+repository: git://github.com/davidli218/esp-idf-74hc595.git
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "0.*"
