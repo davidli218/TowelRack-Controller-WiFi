@@ -62,17 +62,29 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.1.0
+  ic_74hc595_driver:
+    component_hash: d9113c9618ee6aa5a2c1e608a40ab2c01fa2c0c56b6037a886ab7a3bfc1d366a
+    dependencies:
+    - name: idf
+      version: '>=5.0'
+    - name: espressif/cmake_utilities
+      version: 0.*
+    source:
+      git: https://github.com/davidli218/esp-idf-74hc595.git
+      path: .
+      type: git
+    version: ed966b3a16bba72e6981cee74fbbb77c69d4f09c
   idf:
     source:
       type: idf
     version: 5.3.1
 direct_dependencies:
 - espressif/button
-- espressif/cmake_utilities
 - espressif/knob
 - espressif/led_strip
 - espressif/ntc_driver
+- ic_74hc595_driver
 - idf
-manifest_hash: 4720764305cae072745a2e00483333eb1a2d333e48b1744bc0b902a1e12c65ab
+manifest_hash: 074bc723bac64812c4bea2c9ebf33c7cb9beb192b65850adf9b17bf3e1132840
 target: esp32c3
 version: 2.0.0
